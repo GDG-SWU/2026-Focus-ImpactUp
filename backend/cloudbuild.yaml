@@ -4,6 +4,7 @@ steps:
 
   # Dockerfile을 읽어서 도커 이미지 빌드
   - name: 'gcr.io/cloud-builders/docker'
+    dir: 'backend'
     args:
       - 'build'
       - '-t'
