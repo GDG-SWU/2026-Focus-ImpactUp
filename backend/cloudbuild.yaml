@@ -1,7 +1,8 @@
 steps:
   - name: 'gradle:8-jdk21'
     dir: 'backend'
-    args: ['clean', 'build', '-x', 'test']
+    entrypoint: 'bash'
+    args: ['-c', 'chmod +x ./gradlew && ./gradlew clean build -x test']
 
   # Dockerfile을 읽어서 도커 이미지 빌드
   - name: 'gcr.io/cloud-builders/docker'
