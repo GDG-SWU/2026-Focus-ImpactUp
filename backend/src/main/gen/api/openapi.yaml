@@ -1,0 +1,2681 @@
+openapi: 3.0.3
+info:
+  description: |
+    재난 상황에서 취약계층(외국인, 아동 동반, 기저질환자 등)을 위한 긴급 지원 앱의 백엔드 API입니다.
+
+    ## 공통 규격
+    - **Base URL**: `https://api.{service-domain}/api/v1`
+    - **인증**: JWT Bearer Token (`Authorization: Bearer {token}`)
+    - **언어 헤더**: `Accept-Language: ar | fr | wo | ff | ha`
+    - **오프라인 전략**: 로컬 SQLite 캐시 우선 → 온라인 복귀 시 동기화
+    - **오프라인 응답**: `X-Offline-Cache: true` 헤더 포함
+    - **Content-Type**: `application/json` (파일 업로드 제외)
+
+    ## 에러 코드 목록
+
+    | 코드 | HTTP 상태 | 설명 |
+    |------|-----------|------|
+    | `AUTH_TOKEN_MISSING` | 401 | Authorization 헤더 없음 |
+    | `AUTH_TOKEN_EXPIRED` | 401 | JWT 토큰 만료 |
+    | `AUTH_TOKEN_INVALID` | 401 | JWT 토큰 형식 오류 |
+    | `FORBIDDEN` | 403 | 해당 리소스에 접근 권한 없음 |
+    | `USER_NOT_FOUND` | 404 | 존재하지 않는 사용자 |
+    | `PROFILE_NOT_FOUND` | 404 | 건강 프로필 미등록 상태 |
+    | `FACILITY_NOT_FOUND` | 404 | 존재하지 않는 기관 ID |
+    | `CARD_NOT_FOUND` | 404 | 해당 번역 카드 없음 |
+    | `VALIDATION_ERROR` | 422 | 요청 Body 유효성 검사 실패 |
+    | `LOCATION_UNAVAILABLE` | 503 | GPS 신호 유실 및 추측 항법 데이터 부족 |
+    | `TTS_UNAVAILABLE` | 503 | TTS 서비스(Google TTS 등) 응답 불가 |
+    | `OCR_PROCESSING_FAILED` | 500 | ML Kit OCR 처리 실패 |
+    | `OFFLINE_CACHE_STALE` | 200 | 오프라인 캐시 반환 (데이터 최신 아닐 수 있음) |
+    | `UNSUPPORTED_LANGUAGE` | 400 | 지원하지 않는 언어 코드 |
+    | `FILE_TOO_LARGE` | 413 | 업로드 파일 10MB 초과 |
+    | `INVALID_IMAGE_FORMAT` | 415 | 지원하지 않는 이미지 형식 |
+    | `INTERNAL_SERVER_ERROR` | 500 | 서버 내부 오류 |
+  title: QOS API
+  version: 1.0.0
+servers:
+- description: Local
+  url: http://localhost:8080/api/v1
+- description: Production
+  url: https://api.example.com/api/v1
+- description: Staging
+  url: https://staging-api.example.com/api/v1
+security:
+- BearerAuth: []
+tags:
+- description: 사용자 온보딩 및 프로필 관리
+  name: Profile
+- description: 홈 화면 상태 및 생존 가이드
+  name: Status
+- description: 위치 기반 지도 및 기관 탐색
+  name: Map
+- description: 번역 카드 및 TTS
+  name: Translation
+- description: 스마트 세이프티 OCR
+  name: OCR
+paths:
+  /users/onboard:
+    post:
+      description: 앱 최초 실행 시 디바이스 언어 감지 및 사용자 선택 언어 등록. JWT 발급.
+      requestBody:
+        content:
+          application/json:
+            example:
+              locale: ar-SD
+              preferred_language: ar
+            schema:
+              $ref: '#/components/schemas/OnboardRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardResponse'
+          description: "온보딩 완료, JWT 발급"
+        "400":
+          content:
+            application/json:
+              examples:
+                unsupported_language:
+                  value:
+                    code: UNSUPPORTED_LANGUAGE
+                    message: 지원하지 않는 언어 코드입니다.
+                    offline: false
+                validation_error:
+                  value:
+                    code: VALIDATION_ERROR
+                    message: 요청 데이터가 올바르지 않습니다.
+                    offline: false
+                    details:
+                      preferred_language: "ar, fr, wo, ff, ha 중 하나여야 합니다."
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 유효성 검사 실패 또는 지원하지 않는 언어
+      summary: 초기 언어 설정 (온보딩)
+      tags:
+      - Profile
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /users/profile:
+    get:
+      description: "언어, 기저질환, 알레르기, 동반자 여부 전체 조회."
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+          description: 프로필 조회 성공
+          headers:
+            X-Offline-Cache:
+              explode: false
+              schema:
+                type: boolean
+              style: simple
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "404":
+          content:
+            application/json:
+              example:
+                code: USER_NOT_FOUND
+                message: 존재하지 않는 사용자입니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 사용자 없음
+      security:
+      - BearerAuth: []
+      summary: 프로필 전체 조회
+      tags:
+      - Profile
+      x-accepts:
+      - application/json
+  /users/profile/health:
+    post:
+      description: |
+        기저질환(당뇨·고혈압 등), 알레르기(페니실린 등) 정보 등록.
+        입력값은 OCR 위험 감지 판단 로직과 연계됨.
+        오프라인 시 로컬 SQLite 저장.
+      requestBody:
+        content:
+          application/json:
+            example:
+              conditions:
+              - diabetes
+              - hypertension
+              allergies:
+              - penicillin
+              medications:
+              - metformin
+              - lisinopril
+            schema:
+              $ref: '#/components/schemas/HealthProfileRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthProfileResponse'
+          description: 건강 프로필 등록 성공
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "422":
+          content:
+            application/json:
+              example:
+                code: VALIDATION_ERROR
+                message: 요청 데이터가 올바르지 않습니다.
+                offline: false
+                details:
+                  lat: 유효한 위도 값이 필요합니다 (-90 ~ 90).
+                  lng: 유효한 경도 값이 필요합니다 (-180 ~ 180).
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 요청 Body 유효성 검사 실패
+      security:
+      - BearerAuth: []
+      summary: 건강 프로필 등록
+      tags:
+      - Profile
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+    put:
+      description: 기저질환·알레르기·복용 약물 수정.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HealthProfileRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthProfileResponse'
+          description: 수정 성공
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "404":
+          content:
+            application/json:
+              example:
+                code: PROFILE_NOT_FOUND
+                message: 건강 프로필이 등록되지 않았습니다. 먼저 POST로 등록하세요.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 건강 프로필 미등록
+      security:
+      - BearerAuth: []
+      summary: 건강 프로필 수정
+      tags:
+      - Profile
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /users/profile/companions:
+    post:
+      description: |
+        아동·암산부 등 동반 가족 유형 등록.
+        추후 쉼터 필터링 시 '가족/여성 전용' 우선 안내에 활용.
+      requestBody:
+        content:
+          application/json:
+            example:
+              companion_types:
+              - child
+              - pregnant
+            schema:
+              $ref: '#/components/schemas/CompanionRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanionResponse'
+          description: 동반자 등록 성공
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "422":
+          content:
+            application/json:
+              example:
+                code: VALIDATION_ERROR
+                message: 요청 데이터가 올바르지 않습니다.
+                offline: false
+                details:
+                  lat: 유효한 위도 값이 필요합니다 (-90 ~ 90).
+                  lng: 유효한 경도 값이 필요합니다 (-180 ~ 180).
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 요청 Body 유효성 검사 실패
+      security:
+      - BearerAuth: []
+      summary: 동반자 등록
+      tags:
+      - Profile
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /status/network:
+    get:
+      description: |
+        온라인/오프라인 연결 상태 및 마지막으로 확인된 위치 정보 반환.
+        오프라인에서도 항상 표시 (로컬 캐시 기반).
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkStatusResponse'
+          description: 상태 조회 성공
+          headers:
+            X-Offline-Cache:
+              explode: false
+              schema:
+                type: boolean
+              style: simple
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 네트워크 상태 배너 조회
+      tags:
+      - Status
+      x-accepts:
+      - application/json
+  /guide/survival-actions:
+    get:
+      description: |
+        현재 생존 단계 기반 다음 할 일 안내.
+        로컬 캐시 기반 제안 표시 (오프라인 동작).
+      parameters:
+      - description: 현재 생존 단계 (미입력 시 서버에서 자동 판단)
+        explode: true
+        in: query
+        name: stage
+        required: false
+        schema:
+          enum:
+          - dehydration_risk
+          - find_water
+          - find_food
+          - find_shelter
+          - move_to_facility
+          - stable
+          type: string
+        style: form
+      - example: 15.5517
+        explode: true
+        in: query
+        name: location_lat
+        required: false
+        schema:
+          format: double
+          type: number
+        style: form
+      - example: 32.5324
+        explode: true
+        in: query
+        name: location_lng
+        required: false
+        schema:
+          format: double
+          type: number
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurvivalActionsResponse'
+          description: 생존 행동 제안 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 생존 행동 제안 조회
+      tags:
+      - Status
+      x-accepts:
+      - application/json
+  /home/quick-categories:
+    get:
+      description: 의료·음식·식수·쉼터 4가지 핵심 카테고리 아이콘 및 탭 지도 딥링크 반환.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickCategoriesResponse'
+          description: 카테고리 목록 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 긴급 퀵 버튼 카테고리 조회
+      tags:
+      - Status
+      x-accepts:
+      - application/json
+  /map/tiles:
+    get:
+      description: |
+        Mapbox 카나리아 지역 벡터 타일 URL 템플릿 및 주요 기관 위치 GeoJSON 반환.
+        앱 설치 시 사전 다운로드 기반 오프라인 타일.
+      parameters:
+      - description: "Bounding box (minLng,minLat,maxLng,maxLat)"
+        example: "32.4,15.4,32.7,15.7"
+        explode: true
+        in: query
+        name: bbox
+        required: false
+        schema:
+          type: string
+        style: form
+      - example: 14
+        explode: true
+        in: query
+        name: zoom
+        required: false
+        schema:
+          maximum: 18
+          minimum: 1
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapTilesResponse'
+          description: 지도 타일 정보 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 오프라인 지도 타일 조회
+      tags:
+      - Map
+      x-accepts:
+      - application/json
+  /location/current:
+    get:
+      description: GPS 신호 기반 현재 위치 반환. 오프라인 시 파란 점 렌더링용 캐시 반환.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentLocationResponse'
+          description: 위치 정보 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "503":
+          content:
+            application/json:
+              example:
+                code: LOCATION_UNAVAILABLE
+                message: GPS 신호를 수신할 수 없습니다. 위치 핀을 수동으로 수정하거나 추측 항법을 사용하세요.
+                offline: true
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: GPS 신호 유실
+      security:
+      - BearerAuth: []
+      summary: 현재 위치 조회
+      tags:
+      - Map
+      x-accepts:
+      - application/json
+  /location/dead-reckoning:
+    post:
+      description: |
+        GPS 신호 유실 시 나침반 + 가속도계(걸음 수) 데이터로 위치 추정.
+        오프라인 완벽 동작. 오프라인 시 화면 상단 나침반 UI 표시.
+      requestBody:
+        content:
+          application/json:
+            example:
+              last_lat: 15.55
+              last_lng: 32.53
+              heading: 45.0
+              steps: 250
+              stride_length_m: 0.75
+            schema:
+              $ref: '#/components/schemas/DeadReckoningRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadReckoningResponse'
+          description: 추정 위치 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "422":
+          content:
+            application/json:
+              example:
+                code: VALIDATION_ERROR
+                message: 요청 데이터가 올바르지 않습니다.
+                offline: false
+                details:
+                  lat: 유효한 위도 값이 필요합니다 (-90 ~ 90).
+                  lng: 유효한 경도 값이 필요합니다 (-180 ~ 180).
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 요청 Body 유효성 검사 실패
+        "503":
+          content:
+            application/json:
+              example:
+                code: LOCATION_UNAVAILABLE
+                message: 추측 항법에 필요한 센서 데이터가 부족합니다.
+                offline: true
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 추측 항법 데이터 부족
+      security:
+      - BearerAuth: []
+      summary: 추측 항법(Dead Reckoning) 위치 추정
+      tags:
+      - Map
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /location/pin:
+    put:
+      description: |
+        사용자가 직접 위치 핀을 수정.
+        오프라인 시 화면 상단 나침반 UI 표시.
+      requestBody:
+        content:
+          application/json:
+            example:
+              lat: 15.552
+              lng: 32.533
+            schema:
+              $ref: '#/components/schemas/LocationPinRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationPinResponse'
+          description: 위치 핀 수정 성공
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "422":
+          content:
+            application/json:
+              example:
+                code: VALIDATION_ERROR
+                message: 요청 데이터가 올바르지 않습니다.
+                offline: false
+                details:
+                  lat: 유효한 위도 값이 필요합니다 (-90 ~ 90).
+                  lng: 유효한 경도 값이 필요합니다 (-180 ~ 180).
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 요청 Body 유효성 검사 실패
+      security:
+      - BearerAuth: []
+      summary: 위치 핀 수동 수정
+      tags:
+      - Map
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /facilities:
+    get:
+      description: |
+        캠프·병원·NGO·식수 핀 필터링 뷰 제공.
+        오프라인 시 로컬 캐시 반환.
+      parameters:
+      - description: 기관 카테고리 필터 (미입력 시 전체)
+        explode: true
+        in: query
+        name: category
+        required: false
+        schema:
+          enum:
+          - camp
+          - hospital
+          - ngo
+          - water
+          type: string
+        style: form
+      - example: 15.5517
+        explode: true
+        in: query
+        name: lat
+        required: false
+        schema:
+          format: double
+          type: number
+        style: form
+      - example: 32.5324
+        explode: true
+        in: query
+        name: lng
+        required: false
+        schema:
+          format: double
+          type: number
+        style: form
+      - description: "검색 반경 (미터, 기본 5km)"
+        example: 3000
+        explode: true
+        in: query
+        name: radius
+        required: false
+        schema:
+          default: 5000
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityListResponse'
+          description: 기관 목록 반환
+          headers:
+            X-Offline-Cache:
+              explode: false
+              schema:
+                type: boolean
+              style: simple
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 기관 목록 조회 (카테고리 필터)
+      tags:
+      - Map
+      x-accepts:
+      - application/json
+  /facilities/{id}:
+    get:
+      description: |
+        기관명·위치·거리·운영 여부·수용 상태·서비스 목록 반환.
+        Bottom Sheet 형태 UI용.
+      parameters:
+      - example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityDetailResponse'
+          description: 기관 상세 정보 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "404":
+          content:
+            application/json:
+              example:
+                code: FACILITY_NOT_FOUND
+                message: 존재하지 않는 기관입니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 기관 없음
+      security:
+      - BearerAuth: []
+      summary: 기관 상세 조회
+      tags:
+      - Map
+      x-accepts:
+      - application/json
+  /facilities/{id}/status:
+    get:
+      description: |
+        온라인: 수용 상태 실시간 업데이트.
+        오프라인: "정보가 정확하지 않을 수 있음" 배너 포함 응답.
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityStatusResponse'
+          description: 기관 상태 반환
+          headers:
+            X-Offline-Cache:
+              explode: false
+              schema:
+                type: boolean
+              style: simple
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "404":
+          content:
+            application/json:
+              example:
+                code: FACILITY_NOT_FOUND
+                message: 존재하지 않는 기관입니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 기관 없음
+      security:
+      - BearerAuth: []
+      summary: 기관 가용 상태 조회
+      tags:
+      - Map
+      x-accepts:
+      - application/json
+  /cards/phrasebook:
+    get:
+      description: |
+        상황별 자주 쓰는 카드 5개 국어 무장 목록 전체 로컬 제공.
+        로컬 DB 활용.
+      parameters:
+      - description: 카드 카테고리 (미입력 시 전체)
+        explode: true
+        in: query
+        name: category
+        required: false
+        schema:
+          enum:
+          - medical
+          - shelter
+          - food
+          - sos
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhrasebookResponse'
+          description: 번역 카드 목록 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 오프라인 번역 카드 목록 조회
+      tags:
+      - Translation
+      x-accepts:
+      - application/json
+  /cards/recent:
+    get:
+      description: 자주 쓰는 카드 상단 노출 로직 + 최근 사용 카드 목록 반환.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentCardsResponse'
+          description: 최근 사용 카드 목록 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+      security:
+      - BearerAuth: []
+      summary: 최근 사용 카드 조회
+      tags:
+      - Translation
+      x-accepts:
+      - application/json
+  /cards/sos:
+    get:
+      description: |
+        0.1.2에서 입력한 건강 프로필(기저질환·알레르기·복용약)을
+        현지어로 자동 번역하여 전화 카드 형태 반환.
+        텍스트+음성 발화 지원.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SosCardResponse'
+          description: SOS 카드 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "404":
+          content:
+            application/json:
+              example:
+                code: PROFILE_NOT_FOUND
+                message: 건강 프로필이 등록되지 않아 SOS 카드를 생성할 수 없습니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 건강 프로필 미등록
+      security:
+      - BearerAuth: []
+      summary: 내 정보 SOS 카드 조회
+      tags:
+      - Translation
+      x-accepts:
+      - application/json
+  /tts/card:
+    post:
+      description: |
+        번역 카드 탭 시 현지어 음성 출력.
+        - ar·fr → Google TTS API (온라인 필요)
+        - wo·ff·ha → 사전 녹음 오디오 파일 (오프라인 동작 보장)
+      requestBody:
+        content:
+          application/json:
+            example:
+              text: أنا مريض بالسكري
+              language: ar
+            schema:
+              $ref: '#/components/schemas/TtsRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TtsResponse'
+          description: TTS 오디오 URL 반환
+        "400":
+          content:
+            application/json:
+              example:
+                code: UNSUPPORTED_LANGUAGE
+                message: 지원하지 않는 언어 코드입니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 지원하지 않는 언어
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "503":
+          content:
+            application/json:
+              example:
+                code: TTS_UNAVAILABLE
+                message: TTS 서비스를 사용할 수 없습니다. 사전 녹음 언어(wo/ff/ha)는 오프라인에서 이용 가능합니다.
+                offline: true
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: TTS 서비스 응답 불가
+      security:
+      - BearerAuth: []
+      summary: 번역 카드 TTS 재생
+      tags:
+      - Translation
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /ocr/scan:
+    post:
+      description: |
+        ML Kit 비전 AI 기반 카메라 촬영.
+        의약품·안내판 텍스트 추출 → 온디바이스 국어 번역.
+        **참고용 의료 판단 사용 금지 문구 항상 포함.**
+        온디바이스 처리로 오프라인 완벽 동작.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/_ocr_scan_post_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OcrScanResponse'
+          description: OCR 결과 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "413":
+          content:
+            application/json:
+              example:
+                code: FILE_TOO_LARGE
+                message: 이미지 파일이 10MB를 초과합니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 파일 크기 초과
+        "415":
+          content:
+            application/json:
+              example:
+                code: INVALID_IMAGE_FORMAT
+                message: JPEG 또는 PNG 형식의 이미지만 지원합니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 지원하지 않는 이미지 형식
+        "500":
+          content:
+            application/json:
+              example:
+                code: OCR_PROCESSING_FAILED
+                message: 이미지에서 텍스트를 인식하지 못했습니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: OCR 처리 실패
+      security:
+      - BearerAuth: []
+      summary: 카메라 라벨 스캔 (OCR)
+      tags:
+      - OCR
+      x-content-type: multipart/form-data
+      x-accepts:
+      - application/json
+  /ocr/risk-check:
+    post:
+      description: |
+        OCR 인식 텍스트를 사용자 건강 프로필(알레르기·기저질환)과 매칭.
+        페니실린·금기 키워드 감지 시 화면 경고 배너 + 햅틱 진동 강제 발생.
+        온디바이스 처리로 오프라인 완벽 동작.
+      requestBody:
+        content:
+          application/json:
+            example:
+              ocr_text: Amoxicillin 500mg - contains Penicillin group antibiotic
+              user_id: 550e8400-e29b-41d4-a716-446655440000
+            schema:
+              $ref: '#/components/schemas/RiskCheckRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                risk_detected:
+                  summary: 위험 감지됨
+                  value:
+                    risk_detected: true
+                    risk_level: critical
+                    matched_risks:
+                    - keyword: Penicillin
+                      matched_profile_field: allergy
+                      matched_value: penicillin
+                      warning_message: 페니실린 알레르기가 있습니다. 이 약물을 복용하지 마세요.
+                    trigger_haptic: true
+                    trigger_alert_banner: true
+                    offline: true
+                no_risk:
+                  summary: 위험 없음
+                  value:
+                    risk_detected: false
+                    risk_level: none
+                    matched_risks: []
+                    trigger_haptic: false
+                    trigger_alert_banner: false
+                    offline: true
+              schema:
+                $ref: '#/components/schemas/RiskCheckResponse'
+          description: 위험 감지 결과 반환
+        "401":
+          content:
+            application/json:
+              examples:
+                token_missing:
+                  summary: 토큰 없음
+                  value:
+                    code: AUTH_TOKEN_MISSING
+                    message: Authorization 헤더가 없습니다.
+                    offline: false
+                token_expired:
+                  summary: 토큰 만료
+                  value:
+                    code: AUTH_TOKEN_EXPIRED
+                    message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                    offline: false
+                token_invalid:
+                  summary: 토큰 형식 오류
+                  value:
+                    code: AUTH_TOKEN_INVALID
+                    message: JWT 토큰 형식이 올바르지 않습니다.
+                    offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 인증 실패
+        "404":
+          content:
+            application/json:
+              example:
+                code: PROFILE_NOT_FOUND
+                message: 건강 프로필이 등록되지 않아 위험 감지를 수행할 수 없습니다.
+                offline: false
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 건강 프로필 없음 (위험 감지 불가)
+        "422":
+          content:
+            application/json:
+              example:
+                code: VALIDATION_ERROR
+                message: 요청 데이터가 올바르지 않습니다.
+                offline: false
+                details:
+                  lat: 유효한 위도 값이 필요합니다 (-90 ~ 90).
+                  lng: 유효한 경도 값이 필요합니다 (-180 ~ 180).
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 요청 Body 유효성 검사 실패
+      security:
+      - BearerAuth: []
+      summary: OCR 텍스트 위험 감지 경고
+      tags:
+      - OCR
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+components:
+  responses:
+    Unauthorized:
+      content:
+        application/json:
+          examples:
+            token_missing:
+              summary: 토큰 없음
+              value:
+                code: AUTH_TOKEN_MISSING
+                message: Authorization 헤더가 없습니다.
+                offline: false
+            token_expired:
+              summary: 토큰 만료
+              value:
+                code: AUTH_TOKEN_EXPIRED
+                message: JWT 토큰이 만료되었습니다. 다시 로그인해주세요.
+                offline: false
+            token_invalid:
+              summary: 토큰 형식 오류
+              value:
+                code: AUTH_TOKEN_INVALID
+                message: JWT 토큰 형식이 올바르지 않습니다.
+                offline: false
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: 인증 실패
+    ValidationError:
+      content:
+        application/json:
+          example:
+            code: VALIDATION_ERROR
+            message: 요청 데이터가 올바르지 않습니다.
+            offline: false
+            details:
+              lat: 유효한 위도 값이 필요합니다 (-90 ~ 90).
+              lng: 유효한 경도 값이 필요합니다 (-180 ~ 180).
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: 요청 Body 유효성 검사 실패
+    FacilityNotFound:
+      content:
+        application/json:
+          example:
+            code: FACILITY_NOT_FOUND
+            message: 존재하지 않는 기관입니다.
+            offline: false
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: 기관 없음
+  schemas:
+    ErrorResponse:
+      example:
+        offline: false
+        code: AUTH_TOKEN_EXPIRED
+        details:
+          key: ""
+        message: JWT 토큰이 만료되었습니다.
+      properties:
+        code:
+          description: 에러 식별 코드
+          example: AUTH_TOKEN_EXPIRED
+          type: string
+        message:
+          description: 사람이 읽을 수 있는 에러 메시지 (요청 언어 기반 다국어)
+          example: JWT 토큰이 만료되었습니다.
+          type: string
+        offline:
+          description: 오프라인 캐시 응답 여부
+          example: false
+          type: boolean
+        details:
+          additionalProperties: true
+          description: 유효성 검사 실패 시 필드별 오류 상세
+          type: object
+      required:
+      - code
+      - message
+      - offline
+      type: object
+    OfflineMeta:
+      properties:
+        offline:
+          description: 오프라인 캐시 데이터 여부
+          example: false
+          type: boolean
+        cached_at:
+          description: 캐시 생성 시각
+          example: 2025-01-15T09:30:00Z
+          format: date-time
+          type: string
+      type: object
+    Coordinates:
+      properties:
+        lat:
+          description: 위도
+          example: 15.5517
+          format: double
+          type: number
+        lng:
+          description: 경도
+          example: 32.5324
+          format: double
+          type: number
+      required:
+      - lat
+      - lng
+      type: object
+    OnboardRequest:
+      example:
+        locale: ar-SD
+        preferred_language: ar
+      properties:
+        locale:
+          description: 디바이스 기본 로케일 (ISO 639-1 + 국가 코드)
+          example: ar-SD
+          type: string
+        preferred_language:
+          description: 사용자가 선택한 앱 표시 언어
+          enum:
+          - ar
+          - fr
+          - wo
+          - ff
+          - ha
+          example: ar
+          type: string
+      required:
+      - locale
+      - preferred_language
+      type: object
+    OnboardResponse:
+      example:
+        access_token: access_token
+        offline: false
+        user_id: 550e8400-e29b-41d4-a716-446655440000
+        expires_in: 86400
+        preferred_language: ar
+      properties:
+        user_id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          format: uuid
+          type: string
+        preferred_language:
+          example: ar
+          type: string
+        access_token:
+          description: JWT 액세스 토큰
+          type: string
+        expires_in:
+          description: 토큰 유효 시간 (초)
+          example: 86400
+          type: integer
+        offline:
+          example: false
+          type: boolean
+      type: object
+    HealthProfileRequest:
+      example:
+        allergies:
+        - penicillin
+        - sulfonamide
+        medications:
+        - metformin
+        - lisinopril
+        conditions:
+        - diabetes
+        - hypertension
+      properties:
+        conditions:
+          description: 기저질환 코드 목록 (ICD-10 권장)
+          example:
+          - diabetes
+          - hypertension
+          items:
+            type: string
+          type: array
+        allergies:
+          description: 알레르기 물질 목록
+          example:
+          - penicillin
+          - sulfonamide
+          items:
+            type: string
+          type: array
+        medications:
+          description: 복용 중인 약물 목록
+          example:
+          - metformin
+          - lisinopril
+          items:
+            type: string
+          type: array
+      type: object
+    HealthProfileResponse:
+      example:
+        allergies:
+        - penicillin
+        offline: false
+        updated_at: 2025-01-15T10:00:00Z
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        medications:
+        - metformin
+        conditions:
+        - diabetes
+        - hypertension
+      properties:
+        user_id:
+          format: uuid
+          type: string
+        conditions:
+          example:
+          - diabetes
+          - hypertension
+          items:
+            type: string
+          type: array
+        allergies:
+          example:
+          - penicillin
+          items:
+            type: string
+          type: array
+        medications:
+          example:
+          - metformin
+          items:
+            type: string
+          type: array
+        updated_at:
+          example: 2025-01-15T10:00:00Z
+          format: date-time
+          type: string
+        offline:
+          example: false
+          type: boolean
+      type: object
+    UserProfileResponse:
+      example:
+        offline: true
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        companions:
+          companion_types:
+          - child
+          - pregnant
+          offline: true
+          updated_at: 2000-01-23T04:56:07.000+00:00
+        health:
+          allergies:
+          - penicillin
+          offline: false
+          updated_at: 2025-01-15T10:00:00Z
+          user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          medications:
+          - metformin
+          conditions:
+          - diabetes
+          - hypertension
+        created_at: 2000-01-23T04:56:07.000+00:00
+        locale: ar-SD
+        preferred_language: ar
+      properties:
+        user_id:
+          format: uuid
+          type: string
+        preferred_language:
+          example: ar
+          type: string
+        locale:
+          example: ar-SD
+          type: string
+        health:
+          $ref: '#/components/schemas/HealthProfileResponse'
+        companions:
+          $ref: '#/components/schemas/CompanionResponse'
+        created_at:
+          format: date-time
+          type: string
+        offline:
+          type: boolean
+      type: object
+    CompanionRequest:
+      example:
+        companion_types:
+        - child
+        - pregnant
+      properties:
+        companion_types:
+          description: 동반 가족 유형 목록
+          example:
+          - child
+          - pregnant
+          items:
+            enum:
+            - child
+            - infant
+            - pregnant
+            - elderly
+            - disabled
+            type: string
+          type: array
+      required:
+      - companion_types
+      type: object
+    CompanionResponse:
+      example:
+        companion_types:
+        - child
+        - pregnant
+        offline: true
+        updated_at: 2000-01-23T04:56:07.000+00:00
+      properties:
+        companion_types:
+          example:
+          - child
+          - pregnant
+          items:
+            type: string
+          type: array
+        updated_at:
+          format: date-time
+          type: string
+        offline:
+          type: boolean
+      type: object
+    NetworkStatusResponse:
+      example:
+        last_known_lng: 32.5324
+        offline: false
+        updated_at: 2025-01-15T09:45:00Z
+        online: true
+        last_known_lat: 15.5517
+      properties:
+        online:
+          description: 현재 네트워크 연결 상태
+          example: true
+          type: boolean
+        last_known_lat:
+          example: 15.5517
+          format: double
+          type: number
+        last_known_lng:
+          example: 32.5324
+          format: double
+          type: number
+        updated_at:
+          example: 2025-01-15T09:45:00Z
+          format: date-time
+          type: string
+        offline:
+          example: false
+          type: boolean
+      type: object
+    SurvivalActionsResponse:
+      example:
+        offline: true
+        stage: dehydration_risk
+        cached_at: 2000-01-23T04:56:07.000+00:00
+        actions:
+        - action_type: navigate
+          label: 탈수 위험 → 가까운 식수 찾기
+          priority: 1
+          target_facility_category: water
+        - action_type: navigate
+          label: 탈수 위험 → 가까운 식수 찾기
+          priority: 1
+          target_facility_category: water
+      properties:
+        stage:
+          description: 현재 생존 단계
+          enum:
+          - dehydration_risk
+          - find_water
+          - find_food
+          - find_shelter
+          - move_to_facility
+          - stable
+          example: dehydration_risk
+          type: string
+        actions:
+          items:
+            $ref: '#/components/schemas/SurvivalAction'
+          type: array
+        offline:
+          example: true
+          type: boolean
+        cached_at:
+          format: date-time
+          type: string
+      type: object
+    SurvivalAction:
+      example:
+        action_type: navigate
+        label: 탈수 위험 → 가까운 식수 찾기
+        priority: 1
+        target_facility_category: water
+      properties:
+        priority:
+          description: 우선순위 (1 = 최우선)
+          example: 1
+          type: integer
+        label:
+          description: 행동 안내 텍스트 (요청 언어 기반)
+          example: 탈수 위험 → 가까운 식수 찾기
+          type: string
+        action_type:
+          enum:
+          - navigate
+          - call
+          - info
+          example: navigate
+          type: string
+        target_facility_category:
+          description: navigate 타입 시 이동 대상 기관 카테고리
+          example: water
+          type: string
+      type: object
+    QuickCategoriesResponse:
+      example:
+        offline: true
+        categories:
+        - icon: medical_cross
+          id: medical
+          label: 의료
+          deep_link: app://map?category=medical
+        - icon: medical_cross
+          id: medical
+          label: 의료
+          deep_link: app://map?category=medical
+      properties:
+        categories:
+          items:
+            $ref: '#/components/schemas/QuickCategory'
+          type: array
+        offline:
+          type: boolean
+      type: object
+    QuickCategory:
+      example:
+        icon: medical_cross
+        id: medical
+        label: 의료
+        deep_link: app://map?category=medical
+      properties:
+        id:
+          enum:
+          - medical
+          - food
+          - water
+          - shelter
+          example: medical
+          type: string
+        label:
+          description: 현지어 라벨
+          example: 의료
+          type: string
+        icon:
+          description: 아이콘 식별자
+          example: medical_cross
+          type: string
+        deep_link:
+          description: 탭 지도 딥링크
+          example: app://map?category=medical
+          type: string
+      type: object
+    MapTilesResponse:
+      example:
+        geojson:
+          type: FeatureCollection
+          features: []
+        offline: true
+        tile_url_template: "https://cdn.example.com/tiles/{z}/{x}/{y}.pbf"
+      properties:
+        tile_url_template:
+          description: Mapbox 벡터 타일 URL 템플릿
+          example: "https://cdn.example.com/tiles/{z}/{x}/{y}.pbf"
+          type: string
+        geojson:
+          description: 주요 기관 위치 GeoJSON FeatureCollection
+          example:
+            type: FeatureCollection
+            features: []
+          type: object
+        offline:
+          type: boolean
+      type: object
+    CurrentLocationResponse:
+      example:
+        accuracy_m: 12.5
+        offline: true
+        lng: 32.5324
+        source: gps
+        lat: 15.5517
+      properties:
+        lat:
+          example: 15.5517
+          format: double
+          type: number
+        lng:
+          example: 32.5324
+          format: double
+          type: number
+        accuracy_m:
+          description: GPS 정확도 (미터)
+          example: 12.5
+          format: double
+          type: number
+        source:
+          description: 위치 데이터 출처
+          enum:
+          - gps
+          - dead_reckoning
+          - manual_pin
+          - cached
+          example: gps
+          type: string
+        offline:
+          type: boolean
+      type: object
+    DeadReckoningRequest:
+      example:
+        last_lng: 32.53
+        heading: 45.0
+        steps: 250
+        last_lat: 15.55
+        stride_length_m: 0.75
+      properties:
+        last_lat:
+          example: 15.55
+          format: double
+          type: number
+        last_lng:
+          example: 32.53
+          format: double
+          type: number
+        heading:
+          description: "나침반 방향 (0-360도, 정북 = 0)"
+          example: 45.0
+          format: double
+          type: number
+        steps:
+          description: 걸음 수 (가속도계 기반)
+          example: 250
+          type: integer
+        stride_length_m:
+          description: "보폭 (미터, 미입력 시 기본값 0.75 적용)"
+          example: 0.75
+          format: double
+          type: number
+      required:
+      - heading
+      - last_lat
+      - last_lng
+      - steps
+      type: object
+    DeadReckoningResponse:
+      example:
+        offline: true
+        estimated_lat: 15.5517
+        confidence: 0.72
+        source: dead_reckoning
+        estimated_lng: 32.5324
+      properties:
+        estimated_lat:
+          example: 15.5517
+          format: double
+          type: number
+        estimated_lng:
+          example: 32.5324
+          format: double
+          type: number
+        confidence:
+          description: 추정 신뢰도 (0~1)
+          example: 0.72
+          format: double
+          maximum: 1
+          minimum: 0
+          type: number
+        source:
+          example: dead_reckoning
+          type: string
+        offline:
+          example: true
+          type: boolean
+      type: object
+    LocationPinRequest:
+      example:
+        lng: 32.533
+        lat: 15.552
+      properties:
+        lat:
+          example: 15.552
+          format: double
+          type: number
+        lng:
+          example: 32.533
+          format: double
+          type: number
+      required:
+      - lat
+      - lng
+      type: object
+    LocationPinResponse:
+      example:
+        offline: true
+        lng: 6.027456183070403
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        source: manual_pin
+        lat: 0.8008281904610115
+      properties:
+        lat:
+          format: double
+          type: number
+        lng:
+          format: double
+          type: number
+        updated_at:
+          format: date-time
+          type: string
+        source:
+          example: manual_pin
+          type: string
+        offline:
+          type: boolean
+      type: object
+    FacilityListResponse:
+      example:
+        offline: true
+        total: 14
+        cached_at: 2000-01-23T04:56:07.000+00:00
+        facilities:
+        - lng: 32.534
+          name: Al-Hilal Camp Medical Post
+          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          availability: available
+          operating: true
+          category: hospital
+          distance_m: 320
+          lat: 15.553
+        - lng: 32.534
+          name: Al-Hilal Camp Medical Post
+          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          availability: available
+          operating: true
+          category: hospital
+          distance_m: 320
+          lat: 15.553
+      properties:
+        facilities:
+          items:
+            $ref: '#/components/schemas/FacilitySummary'
+          type: array
+        total:
+          example: 14
+          type: integer
+        offline:
+          type: boolean
+        cached_at:
+          format: date-time
+          type: string
+      type: object
+    FacilitySummary:
+      example:
+        lng: 32.534
+        name: Al-Hilal Camp Medical Post
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        availability: available
+        operating: true
+        category: hospital
+        distance_m: 320
+        lat: 15.553
+      properties:
+        id:
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          format: uuid
+          type: string
+        name:
+          example: Al-Hilal Camp Medical Post
+          type: string
+        category:
+          enum:
+          - camp
+          - hospital
+          - ngo
+          - water
+          example: hospital
+          type: string
+        lat:
+          example: 15.553
+          format: double
+          type: number
+        lng:
+          example: 32.534
+          format: double
+          type: number
+        distance_m:
+          description: 현재 위치에서 거리 (미터)
+          example: 320
+          type: integer
+        availability:
+          description: 가용 상태 (🟢 available / 🟡 crowded / 🔴 unavailable)
+          enum:
+          - available
+          - crowded
+          - unavailable
+          - unknown
+          example: available
+          type: string
+        operating:
+          example: true
+          type: boolean
+      type: object
+    FacilityDetailResponse:
+      example:
+        address: "Block 4, Al-Hilal Camp, Khartoum"
+        lng: 6.027456183070403
+        contact_phone: +249-900-123456
+        availability: available
+        services:
+        - emergency_care
+        - pharmacy
+        - maternal_health
+        offline: true
+        operating_hours: 08:00-20:00
+        name: Al-Hilal Camp Medical Post
+        cached_at: 2000-01-23T04:56:07.000+00:00
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        operating: true
+        category: camp
+        distance_m: 1
+        lat: 0.8008281904610115
+      properties:
+        id:
+          format: uuid
+          type: string
+        name:
+          example: Al-Hilal Camp Medical Post
+          type: string
+        category:
+          enum:
+          - camp
+          - hospital
+          - ngo
+          - water
+          type: string
+        lat:
+          format: double
+          type: number
+        lng:
+          format: double
+          type: number
+        distance_m:
+          type: integer
+        address:
+          example: "Block 4, Al-Hilal Camp, Khartoum"
+          type: string
+        operating:
+          type: boolean
+        operating_hours:
+          example: 08:00-20:00
+          type: string
+        availability:
+          enum:
+          - available
+          - crowded
+          - unavailable
+          - unknown
+          type: string
+        services:
+          example:
+          - emergency_care
+          - pharmacy
+          - maternal_health
+          items:
+            type: string
+          type: array
+        contact_phone:
+          example: +249-900-123456
+          type: string
+        offline:
+          type: boolean
+        cached_at:
+          format: date-time
+          type: string
+      type: object
+    FacilityStatusResponse:
+      example:
+        capacity_current: 87
+        offline: true
+        last_updated: 2000-01-23T04:56:07.000+00:00
+        stale_warning: false
+        facility_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        availability: crowded
+        capacity_max: 120
+        wait_time_min: 25
+      properties:
+        facility_id:
+          format: uuid
+          type: string
+        availability:
+          enum:
+          - available
+          - crowded
+          - unavailable
+          - unknown
+          example: crowded
+          type: string
+        capacity_current:
+          description: 현재 수용 인원
+          example: 87
+          type: integer
+        capacity_max:
+          description: 최대 수용 인원
+          example: 120
+          type: integer
+        wait_time_min:
+          description: 예상 대기 시간 (분)
+          example: 25
+          type: integer
+        last_updated:
+          format: date-time
+          type: string
+        offline:
+          type: boolean
+        stale_warning:
+          description: 오프라인 시 데이터 부정확 경고 여부
+          example: false
+          type: boolean
+      type: object
+    PhrasebookResponse:
+      example:
+        offline: true
+        cards:
+        - tts_available: true
+          usage_count: 5
+          translations:
+            ar: أنا مريض بالسكري
+            fr: Je suis diabétique
+            wo: Dafa am sukar
+            ff: Mi wonaa diabete
+            ha: Ina da ciwon sukari
+          id: card_medical_001
+          situation: 나는 당뇨병이 있습니다
+        - tts_available: true
+          usage_count: 5
+          translations:
+            ar: أنا مريض بالسكري
+            fr: Je suis diabétique
+            wo: Dafa am sukar
+            ff: Mi wonaa diabete
+            ha: Ina da ciwon sukari
+          id: card_medical_001
+          situation: 나는 당뇨병이 있습니다
+        category: medical
+      properties:
+        category:
+          example: medical
+          type: string
+        cards:
+          items:
+            $ref: '#/components/schemas/PhraseCard'
+          type: array
+        offline:
+          type: boolean
+      type: object
+    PhraseCard:
+      example:
+        tts_available: true
+        usage_count: 5
+        translations:
+          ar: أنا مريض بالسكري
+          fr: Je suis diabétique
+          wo: Dafa am sukar
+          ff: Mi wonaa diabete
+          ha: Ina da ciwon sukari
+        id: card_medical_001
+        situation: 나는 당뇨병이 있습니다
+      properties:
+        id:
+          example: card_medical_001
+          type: string
+        situation:
+          description: 한국어 원문 상황
+          example: 나는 당뇨병이 있습니다
+          type: string
+        translations:
+          additionalProperties:
+            type: string
+          description: 언어 코드 → 번역 텍스트
+          example:
+            ar: أنا مريض بالسكري
+            fr: Je suis diabétique
+            wo: Dafa am sukar
+            ff: Mi wonaa diabete
+            ha: Ina da ciwon sukari
+          type: object
+        tts_available:
+          description: 현재 선택 언어에 TTS 지원 여부
+          example: true
+          type: boolean
+        usage_count:
+          description: 사용자 사용 횟수 (최근 사용 카드 정렬용)
+          example: 5
+          type: integer
+      type: object
+    RecentCardsResponse:
+      example:
+        offline: true
+        cards:
+        - tts_available: true
+          usage_count: 5
+          translations:
+            ar: أنا مريض بالسكري
+            fr: Je suis diabétique
+            wo: Dafa am sukar
+            ff: Mi wonaa diabete
+            ha: Ina da ciwon sukari
+          id: card_medical_001
+          situation: 나는 당뇨병이 있습니다
+        - tts_available: true
+          usage_count: 5
+          translations:
+            ar: أنا مريض بالسكري
+            fr: Je suis diabétique
+            wo: Dafa am sukar
+            ff: Mi wonaa diabete
+            ha: Ina da ciwon sukari
+          id: card_medical_001
+          situation: 나는 당뇨병이 있습니다
+      properties:
+        cards:
+          items:
+            $ref: '#/components/schemas/PhraseCard'
+          type: array
+        offline:
+          type: boolean
+      type: object
+    SosCardResponse:
+      example:
+        offline: true
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        conditions_translated:
+        - code: diabetes
+          label:
+            ar: السكري
+            fr: Diabète
+        - code: diabetes
+          label:
+            ar: السكري
+            fr: Diabète
+        allergies_translated:
+        - code: penicillin
+          label:
+            key: label
+        - code: penicillin
+          label:
+            key: label
+        generated_at: 2000-01-23T04:56:07.000+00:00
+        translations:
+          ar: لدي مرض السكري وحساسية من البنسلين. أتناول الميتفورمين.
+          fr: J'ai le diabète et une allergie à la pénicilline. Je prends de la metformine.
+      properties:
+        user_id:
+          format: uuid
+          type: string
+        generated_at:
+          format: date-time
+          type: string
+        translations:
+          additionalProperties:
+            type: string
+          description: 언어 코드 → 건강정보 번역 텍스트
+          example:
+            ar: لدي مرض السكري وحساسية من البنسلين. أتناول الميتفورمين.
+            fr: J'ai le diabète et une allergie à la pénicilline. Je prends de la
+              metformine.
+          type: object
+        conditions_translated:
+          items:
+            $ref: '#/components/schemas/SosCardResponse_conditions_translated_inner'
+          type: array
+        allergies_translated:
+          items:
+            $ref: '#/components/schemas/SosCardResponse_allergies_translated_inner'
+          type: array
+        offline:
+          type: boolean
+      type: object
+    TtsRequest:
+      example:
+        language: ar
+        text: أنا مريض بالسكري
+      properties:
+        text:
+          description: TTS 변환할 텍스트
+          example: أنا مريض بالسكري
+          type: string
+        language:
+          description: 대상 언어 코드
+          enum:
+          - ar
+          - fr
+          - wo
+          - ff
+          - ha
+          example: ar
+          type: string
+      required:
+      - language
+      - text
+      type: object
+    TtsResponse:
+      example:
+        duration_ms: 2400
+        offline: false
+        tts_engine: google_tts
+        audio_url: https://cdn.example.com/tts/ar/card_medical_001.mp3
+      properties:
+        audio_url:
+          description: 오디오 파일 URL (사전 녹음 언어) 또는 스트림 URL (Google TTS)
+          example: https://cdn.example.com/tts/ar/card_medical_001.mp3
+          type: string
+        tts_engine:
+          description: ar·fr → google_tts / wo·ff·ha → pre_recorded
+          enum:
+          - google_tts
+          - pre_recorded
+          example: google_tts
+          type: string
+        duration_ms:
+          description: 오디오 재생 시간 (밀리초)
+          example: 2400
+          type: integer
+        offline:
+          example: false
+          type: boolean
+      type: object
+    OcrScanResponse:
+      example:
+        raw_text: Amoxicillin 500mg - Penicillin group antibiotic
+        offline: true
+        translated_text: 아목시실린 500mg - 페니실린 계열 항생제
+        highlighted_keywords:
+        - highlight_color: red
+          bold: true
+          keyword: 페니실린
+          type: warning
+        - highlight_color: red
+          bold: true
+          keyword: 페니실린
+          type: warning
+        disclaimer: 참고용으로만 사용하세요. 의료 판단에 사용하지 마세요.
+      properties:
+        raw_text:
+          description: OCR 인식 원문 텍스트
+          example: Amoxicillin 500mg - Penicillin group antibiotic
+          type: string
+        translated_text:
+          description: 온디바이스 번역 텍스트
+          example: 아목시실린 500mg - 페니실린 계열 항생제
+          type: string
+        highlighted_keywords:
+          items:
+            $ref: '#/components/schemas/HighlightedKeyword'
+          type: array
+        disclaimer:
+          description: 의료 판단 사용 금지 문구 (항상 포함)
+          example: 참고용으로만 사용하세요. 의료 판단에 사용하지 마세요.
+          type: string
+        offline:
+          example: true
+          type: boolean
+      type: object
+    HighlightedKeyword:
+      example:
+        highlight_color: red
+        bold: true
+        keyword: 페니실린
+        type: warning
+      properties:
+        keyword:
+          example: 페니실린
+          type: string
+        type:
+          description: dosage=복용량/취수 / warning=주의사항 / ingredient=성분 / instruction=복용지침
+          enum:
+          - dosage
+          - warning
+          - ingredient
+          - instruction
+          example: warning
+          type: string
+        bold:
+          example: true
+          type: boolean
+        highlight_color:
+          enum:
+          - red
+          - yellow
+          - blue
+          - none
+          example: red
+          type: string
+      type: object
+    RiskCheckRequest:
+      example:
+        user_id: 550e8400-e29b-41d4-a716-446655440000
+        ocr_text: Amoxicillin 500mg - contains Penicillin
+      properties:
+        ocr_text:
+          description: OCR로 인식된 원문 텍스트
+          example: Amoxicillin 500mg - contains Penicillin
+          type: string
+        user_id:
+          example: 550e8400-e29b-41d4-a716-446655440000
+          format: uuid
+          type: string
+      required:
+      - ocr_text
+      - user_id
+      type: object
+    RiskCheckResponse:
+      example:
+        trigger_haptic: true
+        risk_level: critical
+        matched_risks:
+        - warning_message: 페니실린 알레르기가 있습니다. 이 약물을 복용하지 마세요.
+          matched_profile_field: allergy
+          matched_value: penicillin
+          keyword: Penicillin
+        - warning_message: 페니실린 알레르기가 있습니다. 이 약물을 복용하지 마세요.
+          matched_profile_field: allergy
+          matched_value: penicillin
+          keyword: Penicillin
+        offline: true
+        trigger_alert_banner: true
+        risk_detected: true
+      properties:
+        risk_detected:
+          description: 위험 감지 여부
+          example: true
+          type: boolean
+        risk_level:
+          enum:
+          - none
+          - low
+          - medium
+          - high
+          - critical
+          example: critical
+          type: string
+        matched_risks:
+          items:
+            $ref: '#/components/schemas/MatchedRisk'
+          type: array
+        trigger_haptic:
+          description: 클라이언트 햅틱 진동 트리거 여부
+          example: true
+          type: boolean
+        trigger_alert_banner:
+          description: 화면 경고 배너 표시 여부
+          example: true
+          type: boolean
+        offline:
+          type: boolean
+      type: object
+    MatchedRisk:
+      example:
+        warning_message: 페니실린 알레르기가 있습니다. 이 약물을 복용하지 마세요.
+        matched_profile_field: allergy
+        matched_value: penicillin
+        keyword: Penicillin
+      properties:
+        keyword:
+          description: OCR 텍스트에서 감지된 위험 키워드
+          example: Penicillin
+          type: string
+        matched_profile_field:
+          description: 사용자 건강 프로필에서 매칭된 항목 유형
+          enum:
+          - allergy
+          - condition
+          - medication_interaction
+          example: allergy
+          type: string
+        matched_value:
+          description: 매칭된 프로필 값
+          example: penicillin
+          type: string
+        warning_message:
+          description: 현지어 경고 메시지
+          example: 페니실린 알레르기가 있습니다. 이 약물을 복용하지 마세요.
+          type: string
+      type: object
+    _ocr_scan_post_request:
+      properties:
+        image:
+          description: "촬영 이미지 파일 (JPEG/PNG, 최대 10MB)"
+          format: binary
+          type: string
+        target_language:
+          description: 번역 대상 언어 (미입력 시 사용자 설정 언어)
+          enum:
+          - ar
+          - fr
+          - wo
+          - ff
+          - ha
+          type: string
+      required:
+      - image
+      type: object
+    SosCardResponse_conditions_translated_inner:
+      example:
+        code: diabetes
+        label:
+          ar: السكري
+          fr: Diabète
+      properties:
+        code:
+          example: diabetes
+          type: string
+        label:
+          additionalProperties:
+            type: string
+          example:
+            ar: السكري
+            fr: Diabète
+          type: object
+      type: object
+    SosCardResponse_allergies_translated_inner:
+      example:
+        code: penicillin
+        label:
+          key: label
+      properties:
+        code:
+          example: penicillin
+          type: string
+        label:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+  securitySchemes:
+    BearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+

@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>재난약자 긴급지원 서비스 API Docs</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css">
+  <style>
+    body { margin: 0; background: #fafafa; }
+    .topbar { background: #1a1a2e !important; }
+    .topbar-wrapper img { display: none; }
+    .topbar-wrapper::after {
+      content: '재난약자 긴급지원 서비스 API';
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-standalone-preset.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <script>
+    const yamlText = `
+openapi: 3.0.3
+info:
+  title: 재난약자 긴급지원 서비스 API
+  version: 1.0.0
+  description: |
+    재난 상황에서 취약계층을 위한 긴급 지원 앱의 백엔드 API입니다.
+
+    ## 공통 규격
+    - **Base URL**: \`https://api.{service-domain}/api/v1\`
+    - **인증**: JWT Bearer Token
+    - **언어 헤더**: \`Accept-Language: ar | fr | wo | ff | ha\`
+    - **오프라인 캐시**: \`X-Offline-Cache: true\` 헤더로 명시
+
+    ## 에러 코드 목록
+
+    | 코드 | HTTP | 설명 |
+    |------|------|------|
+    | AUTH_TOKEN_MISSING | 401 | Authorization 헤더 없음 |
+    | AUTH_TOKEN_EXPIRED | 401 | JWT 토큰 만료 |
+    | AUTH_TOKEN_INVALID | 401 | JWT 토큰 형식 오류 |
+    | FORBIDDEN | 403 | 접근 권한 없음 |
+    | USER_NOT_FOUND | 404 | 존재하지 않는 사용자 |
+    | PROFILE_NOT_FOUND | 404 | 건강 프로필 미등록 |
+    | FACILITY_NOT_FOUND | 404 | 존재하지 않는 기관 ID |
+    | CARD_NOT_FOUND | 404 | 해당 번역 카드 없음 |
+    | VALIDATION_ERROR | 422 | 요청 Body 유효성 검사 실패 |
+    | LOCATION_UNAVAILABLE | 503 | GPS 신호 유실 및 센서 데이터 부족 |
+    | TTS_UNAVAILABLE | 503 | TTS 서비스 응답 불가 |
+    | OCR_PROCESSING_FAILED | 500 | ML Kit OCR 처리 실패 |
+    | OFFLINE_CACHE_STALE | 200 | 오프라인 캐시 반환 (최신 아닐 수 있음) |
+    | UNSUPPORTED_LANGUAGE | 400 | 지원하지 않는 언어 코드 |
+    | FILE_TOO_LARGE | 413 | 업로드 파일 10MB 초과 |
+    | INVALID_IMAGE_FORMAT | 415 | 지원하지 않는 이미지 형식 |
+    | INTERNAL_SERVER_ERROR | 500 | 서버 내부 오류 |
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production
+  - url: https://staging-api.example.com/api/v1
+    description: Staging
+  - url: http://localhost:8080/api/v1
+    description: Local
+
+tags:
+  - name: Profile
+    description: 사용자 온보딩 및 프로필 관리
+  - name: Status
+    description: 홈 화면 상태 및 생존 가이드
+  - name: Map
+    description: 위치 기반 지도 및 기관 탐색
+  - name: Translation
+    description: 번역 카드 및 TTS
+  - name: OCR
+    description: 스마트 세이프티 OCR
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message, offline]
+      properties:
+        code:
+          type: string
+          example: AUTH_TOKEN_EXPIRED
+        message:
+          type: string
+          example: JWT 토큰이 만료되었습니다.
+        offline:
+          type: boolean
+          example: false
+        details:
+          type: object
+          additionalProperties: true
+
+    OnboardRequest:
+      type: object
+      required: [locale, preferred_language]
+      properties:
+        locale:
+          type: string
+          example: ar-SD
+        preferred_language:
+          type: string
+          enum: [ar, fr, wo, ff, ha]
+          example: ar
+
+    OnboardResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        preferred_language:
+          type: string
+          example: ar
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 86400
+        offline:
+          type: boolean
+          example: false
+
+    HealthProfileRequest:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            type: string
+          example: ["diabetes", "hypertension"]
+        allergies:
+          type: array
+          items:
+            type: string
+          example: ["penicillin"]
+        medications:
+          type: array
+          items:
+            type: string
+          example: ["metformin"]
+
+    HealthProfileResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        conditions:
+          type: array
+          items:
+            type: string
+        allergies:
+          type: array
+          items:
+            type: string
+        medications:
+          type: array
+          items:
+            type: string
+        updated_at:
+          type: string
+          format: date-time
+        offline:
+          type: boolean
+
+    UserProfileResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        preferred_language:
+          type: string
+          example: ar
+        locale:
+          type: string
+          example: ar-SD
+        health:
+          \$ref: '#/components/schemas/HealthProfileResponse'
+        companions:
+          \$ref: '#/components/schemas/CompanionResponse'
+        created_at:
+          type: string
+          format: date-time
+        offline:
+          type: boolean
+
+    CompanionRequest:
+      type: object
+      required: [companion_types]
+      properties:
+        companion_types:
+          type: array
+          items:
+            type: string
+            enum: [child, infant, pregnant, elderly, disabled]
+          example: ["child", "pregnant"]
+
+    CompanionResponse:
+      type: object
+      properties:
+        companion_types:
+          type: array
+          items:
+            type: string
+        updated_at:
+          type: string
+          format: date-time
+        offline:
+          type: boolean
+
+    NetworkStatusResponse:
+      type: object
+      properties:
+        online:
+          type: boolean
+          example: true
+        last_known_lat:
+          type: number
+          format: double
+          example: 15.5517
+        last_known_lng:
+          type: number
+          format: double
+          example: 32.5324
+        updated_at:
+          type: string
+          format: date-time
+        offline:
+          type: boolean
+
+    SurvivalActionsResponse:
+      type: object
+      properties:
+        stage:
+          type: string
+          enum: [dehydration_risk, find_water, find_food, find_shelter, move_to_facility, stable]
+        actions:
+          type: array
+          items:
+            \$ref: '#/components/schemas/SurvivalAction'
+        offline:
+          type: boolean
+        cached_at:
+          type: string
+          format: date-time
+
+    SurvivalAction:
+      type: object
+      properties:
+        priority:
+          type: integer
+          example: 1
+        label:
+          type: string
+          example: "탈수 위험 → 가까운 식수 찾기"
+        action_type:
+          type: string
+          enum: [navigate, call, info]
+        target_facility_category:
+          type: string
+          example: water
+
+    QuickCategoriesResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            \$ref: '#/components/schemas/QuickCategory'
+        offline:
+          type: boolean
+
+    QuickCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [medical, food, water, shelter]
+        label:
+          type: string
+          example: 의료
+        icon:
+          type: string
+          example: medical_cross
+        deep_link:
+          type: string
+          example: "app://map?category=medical"
+
+    MapTilesResponse:
+      type: object
+      properties:
+        tile_url_template:
+          type: string
+          example: "https://cdn.example.com/tiles/{z}/{x}/{y}.pbf"
+        geojson:
+          type: object
+        offline:
+          type: boolean
+
+    CurrentLocationResponse:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+          example: 15.5517
+        lng:
+          type: number
+          format: double
+          example: 32.5324
+        accuracy_m:
+          type: number
+          format: double
+          example: 12.5
+        source:
+          type: string
+          enum: [gps, dead_reckoning, manual_pin, cached]
+        offline:
+          type: boolean
+
+    DeadReckoningRequest:
+      type: object
+      required: [last_lat, last_lng, heading, steps]
+      properties:
+        last_lat:
+          type: number
+          format: double
+          example: 15.5500
+        last_lng:
+          type: number
+          format: double
+          example: 32.5300
+        heading:
+          type: number
+          format: double
+          example: 45.0
+          description: 나침반 방향 (0-360도, 정북=0)
+        steps:
+          type: integer
+          example: 250
+        stride_length_m:
+          type: number
+          format: double
+          example: 0.75
+
+    DeadReckoningResponse:
+      type: object
+      properties:
+        estimated_lat:
+          type: number
+          format: double
+        estimated_lng:
+          type: number
+          format: double
+        confidence:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          example: 0.72
+        source:
+          type: string
+          example: dead_reckoning
+        offline:
+          type: boolean
+          example: true
+
+    LocationPinRequest:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+          format: double
+          example: 15.5520
+        lng:
+          type: number
+          format: double
+          example: 32.5330
+
+    LocationPinResponse:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        updated_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: manual_pin
+        offline:
+          type: boolean
+
+    FacilityListResponse:
+      type: object
+      properties:
+        facilities:
+          type: array
+          items:
+            \$ref: '#/components/schemas/FacilitySummary'
+        total:
+          type: integer
+          example: 14
+        offline:
+          type: boolean
+        cached_at:
+          type: string
+          format: date-time
+
+    FacilitySummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Al-Hilal Camp Medical Post"
+        category:
+          type: string
+          enum: [camp, hospital, ngo, water]
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        distance_m:
+          type: integer
+          example: 320
+        availability:
+          type: string
+          enum: [available, crowded, unavailable, unknown]
+          description: "available=🟢 / crowded=🟡 / unavailable=🔴"
+        operating:
+          type: boolean
+
+    FacilityDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+          enum: [camp, hospital, ngo, water]
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        distance_m:
+          type: integer
+        address:
+          type: string
+        operating:
+          type: boolean
+        operating_hours:
+          type: string
+          example: "08:00-20:00"
+        availability:
+          type: string
+          enum: [available, crowded, unavailable, unknown]
+        services:
+          type: array
+          items:
+            type: string
+          example: ["emergency_care", "pharmacy", "maternal_health"]
+        contact_phone:
+          type: string
+        offline:
+          type: boolean
+        cached_at:
+          type: string
+          format: date-time
+
+    FacilityStatusResponse:
+      type: object
+      properties:
+        facility_id:
+          type: string
+          format: uuid
+        availability:
+          type: string
+          enum: [available, crowded, unavailable, unknown]
+        capacity_current:
+          type: integer
+          example: 87
+        capacity_max:
+          type: integer
+          example: 120
+        wait_time_min:
+          type: integer
+          example: 25
+        last_updated:
+          type: string
+          format: date-time
+        offline:
+          type: boolean
+        stale_warning:
+          type: boolean
+
+    PhrasebookResponse:
+      type: object
+      properties:
+        category:
+          type: string
+        cards:
+          type: array
+          items:
+            \$ref: '#/components/schemas/PhraseCard'
+        offline:
+          type: boolean
+
+    PhraseCard:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "card_medical_001"
+        situation:
+          type: string
+          example: "나는 당뇨병이 있습니다"
+        translations:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            ar: "أنا مريض بالسكري"
+            fr: "Je suis diabétique"
+            wo: "Dafa am sukar"
+            ff: "Mi wonaa diabete"
+            ha: "Ina da ciwon sukari"
+        tts_available:
+          type: boolean
+        usage_count:
+          type: integer
+
+    RecentCardsResponse:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            \$ref: '#/components/schemas/PhraseCard'
+        offline:
+          type: boolean
+
+    SosCardResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        generated_at:
+          type: string
+          format: date-time
+        translations:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            ar: "لدي مرض السكري وحساسية من البنسلين."
+            fr: "J'ai le diabète et une allergie à la pénicilline."
+        conditions_translated:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              label:
+                type: object
+                additionalProperties:
+                  type: string
+        allergies_translated:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              label:
+                type: object
+                additionalProperties:
+                  type: string
+        offline:
+          type: boolean
+
+    TtsRequest:
+      type: object
+      required: [text, language]
+      properties:
+        text:
+          type: string
+          example: "أنا مريض بالسكري"
+        language:
+          type: string
+          enum: [ar, fr, wo, ff, ha]
+
+    TtsResponse:
+      type: object
+      properties:
+        audio_url:
+          type: string
+          example: "https://cdn.example.com/tts/ar/card_medical_001.mp3"
+        tts_engine:
+          type: string
+          enum: [google_tts, pre_recorded]
+          description: "ar·fr → google_tts / wo·ff·ha → pre_recorded"
+        duration_ms:
+          type: integer
+          example: 2400
+        offline:
+          type: boolean
+
+    OcrScanResponse:
+      type: object
+      properties:
+        raw_text:
+          type: string
+          example: "Amoxicillin 500mg - Penicillin group antibiotic"
+        translated_text:
+          type: string
+          example: "아목시실린 500mg - 페니실린 계열 항생제"
+        highlighted_keywords:
+          type: array
+          items:
+            \$ref: '#/components/schemas/HighlightedKeyword'
+        disclaimer:
+          type: string
+          example: "참고용으로만 사용하세요. 의료 판단에 사용하지 마세요."
+        offline:
+          type: boolean
+
+    HighlightedKeyword:
+      type: object
+      properties:
+        keyword:
+          type: string
+          example: "페니실린"
+        type:
+          type: string
+          enum: [dosage, warning, ingredient, instruction]
+        bold:
+          type: boolean
+        highlight_color:
+          type: string
+          enum: [red, yellow, blue, none]
+
+    RiskCheckRequest:
+      type: object
+      required: [ocr_text, user_id]
+      properties:
+        ocr_text:
+          type: string
+          example: "Amoxicillin 500mg - contains Penicillin"
+        user_id:
+          type: string
+          format: uuid
+
+    RiskCheckResponse:
+      type: object
+      properties:
+        risk_detected:
+          type: boolean
+        risk_level:
+          type: string
+          enum: [none, low, medium, high, critical]
+        matched_risks:
+          type: array
+          items:
+            \$ref: '#/components/schemas/MatchedRisk'
+        trigger_haptic:
+          type: boolean
+        trigger_alert_banner:
+          type: boolean
+        offline:
+          type: boolean
+
+    MatchedRisk:
+      type: object
+      properties:
+        keyword:
+          type: string
+          example: "Penicillin"
+        matched_profile_field:
+          type: string
+          enum: [allergy, condition, medication_interaction]
+        matched_value:
+          type: string
+          example: penicillin
+        warning_message:
+          type: string
+          example: "페니실린 알레르기가 있습니다. 이 약물을 복용하지 마세요."
+
+  responses:
+    Unauthorized:
+      description: 인증 실패
+      content:
+        application/json:
+          schema:
+            \$ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: 유효성 검사 실패
+      content:
+        application/json:
+          schema:
+            \$ref: '#/components/schemas/ErrorResponse'
+    FacilityNotFound:
+      description: 기관 없음
+      content:
+        application/json:
+          schema:
+            \$ref: '#/components/schemas/ErrorResponse'
+
+paths:
+  /users/onboard:
+    post:
+      tags: [Profile]
+      summary: 초기 언어 설정 (온보딩)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/OnboardRequest'
+      responses:
+        '201':
+          description: 온보딩 완료, JWT 발급
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/OnboardResponse'
+        '400':
+          description: 지원하지 않는 언어 / 유효성 오류
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /users/profile:
+    get:
+      tags: [Profile]
+      summary: 프로필 전체 조회
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 프로필 조회 성공
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 사용자 없음
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /users/profile/health:
+    post:
+      tags: [Profile]
+      summary: 건강 프로필 등록
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/HealthProfileRequest'
+      responses:
+        '201':
+          description: 등록 성공
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/HealthProfileResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '422':
+          \$ref: '#/components/responses/ValidationError'
+    put:
+      tags: [Profile]
+      summary: 건강 프로필 수정
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/HealthProfileRequest'
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/HealthProfileResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 프로필 미등록
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /users/profile/companions:
+    post:
+      tags: [Profile]
+      summary: 동반자 등록
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/CompanionRequest'
+      responses:
+        '201':
+          description: 등록 성공
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/CompanionResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '422':
+          \$ref: '#/components/responses/ValidationError'
+
+  /status/network:
+    get:
+      tags: [Status]
+      summary: 네트워크 상태 배너 조회
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 상태 조회 성공
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/NetworkStatusResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /guide/survival-actions:
+    get:
+      tags: [Status]
+      summary: 생존 행동 제안 조회
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            type: string
+            enum: [dehydration_risk, find_water, find_food, find_shelter, move_to_facility, stable]
+        - name: location_lat
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: location_lng
+          in: query
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: 생존 행동 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/SurvivalActionsResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /home/quick-categories:
+    get:
+      tags: [Status]
+      summary: 긴급 퀵 버튼 카테고리 조회
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 카테고리 목록 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/QuickCategoriesResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /map/tiles:
+    get:
+      tags: [Map]
+      summary: 오프라인 지도 타일 조회
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bbox
+          in: query
+          schema:
+            type: string
+          example: "32.4,15.4,32.7,15.7"
+        - name: zoom
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 18
+      responses:
+        '200':
+          description: 타일 정보 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/MapTilesResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /location/current:
+    get:
+      tags: [Map]
+      summary: 현재 위치 조회
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 위치 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/CurrentLocationResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '503':
+          description: GPS 신호 유실
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /location/dead-reckoning:
+    post:
+      tags: [Map]
+      summary: 추측 항법 위치 추정
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/DeadReckoningRequest'
+      responses:
+        '200':
+          description: 추정 위치 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/DeadReckoningResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '422':
+          \$ref: '#/components/responses/ValidationError'
+
+  /location/pin:
+    put:
+      tags: [Map]
+      summary: 위치 핀 수동 수정
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/LocationPinRequest'
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/LocationPinResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '422':
+          \$ref: '#/components/responses/ValidationError'
+
+  /facilities:
+    get:
+      tags: [Map]
+      summary: 기관 목록 조회
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [camp, hospital, ngo, water]
+        - name: lat
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: lng
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: radius
+          in: query
+          schema:
+            type: integer
+            default: 5000
+      responses:
+        '200':
+          description: 기관 목록 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/FacilityListResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /facilities/{id}:
+    get:
+      tags: [Map]
+      summary: 기관 상세 조회
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 기관 상세 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/FacilityDetailResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '404':
+          \$ref: '#/components/responses/FacilityNotFound'
+
+  /facilities/{id}/status:
+    get:
+      tags: [Map]
+      summary: 기관 가용 상태 조회
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 기관 상태 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/FacilityStatusResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '404':
+          \$ref: '#/components/responses/FacilityNotFound'
+
+  /cards/phrasebook:
+    get:
+      tags: [Translation]
+      summary: 오프라인 번역 카드 목록 조회
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [medical, shelter, food, sos]
+      responses:
+        '200':
+          description: 번역 카드 목록 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/PhrasebookResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /cards/recent:
+    get:
+      tags: [Translation]
+      summary: 최근 사용 카드 조회
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 최근 사용 카드 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/RecentCardsResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+
+  /cards/sos:
+    get:
+      tags: [Translation]
+      summary: 내 정보 SOS 카드 조회
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: SOS 카드 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/SosCardResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 건강 프로필 미등록
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /tts/card:
+    post:
+      tags: [Translation]
+      summary: 번역 카드 TTS 재생
+      description: "ar·fr → Google TTS / wo·ff·ha → 사전 녹음 오디오"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/TtsRequest'
+      responses:
+        '200':
+          description: TTS 오디오 URL 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/TtsResponse'
+        '400':
+          description: 지원하지 않는 언어
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '503':
+          description: TTS 서비스 불가
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /ocr/scan:
+    post:
+      tags: [OCR]
+      summary: 카메라 라벨 스캔 (OCR)
+      description: ML Kit 비전 AI 기반. 온디바이스 처리로 오프라인 완벽 동작.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG/PNG 이미지 (최대 10MB)
+                target_language:
+                  type: string
+                  enum: [ar, fr, wo, ff, ha]
+      responses:
+        '200':
+          description: OCR 결과 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/OcrScanResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '413':
+          description: 파일 크기 초과 (10MB)
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+        '415':
+          description: 지원하지 않는 이미지 형식
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: OCR 처리 실패
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+
+  /ocr/risk-check:
+    post:
+      tags: [OCR]
+      summary: OCR 텍스트 위험 감지 경고
+      description: 건강 프로필과 매칭. 위험 감지 시 햅틱 진동 + 경고 배너 트리거.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              \$ref: '#/components/schemas/RiskCheckRequest'
+      responses:
+        '200':
+          description: 위험 감지 결과 반환
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/RiskCheckResponse'
+        '401':
+          \$ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 건강 프로필 없음
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/ErrorResponse'
+        '422':
+          \$ref: '#/components/responses/ValidationError'
+
+security:
+  - BearerAuth: []
+`;
+
+    const spec = jsyaml.load(yamlText);
+
+    SwaggerUIBundle({
+      spec: spec,
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [
+        SwaggerUIBundle.presets.apis,
+        SwaggerUIStandalonePreset
+      ],
+      plugins: [
+        SwaggerUIBundle.plugins.DownloadUrl
+      ],
+      layout: "StandaloneLayout",
+      defaultModelsExpandDepth: 1,
+      defaultModelExpandDepth: 2,
+      docExpansion: 'list',
+      filter: true,
+      tryItOutEnabled: true
+    });
+  </script>
+</body>
+</html>
