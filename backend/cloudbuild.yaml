@@ -39,7 +39,7 @@ steps:
 
       # 모든 금고 연결
       - '--set-secrets'
-      - 'DB_HOST=DB_HOST:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,FIREBASE_BUCKET_NAME=FIREBASE_BUCKET_NAME:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_BASE_URL=GEMINI_BASE_URL:latest,GEMINI_MODEL=GEMINI_MODEL:latest,/secrets/firebase-key.json=focus-firebase-json:latest'
+      - 'DB_HOST=DB_HOST:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,FIREBASE_BUCKET_NAME=FIREBASE_BUCKET_NAME:latest,/secrets/firebase-key.json=focus-firebase-json:latest, MAPBOX_ACCESS_TOKEN=MAPBOX_ACCESS_TOKEN:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY

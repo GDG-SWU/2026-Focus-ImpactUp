@@ -1,5 +1,6 @@
 package com.example.focus.domain;
 
+import com.example.focus.domain.user.entity.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
