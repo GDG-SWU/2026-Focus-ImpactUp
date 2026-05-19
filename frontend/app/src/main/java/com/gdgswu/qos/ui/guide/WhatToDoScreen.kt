@@ -26,8 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.gdgswu.qos.ui.home.HomeViewModel
 import com.gdgswu.qos.ui.navigation.Screen
 import com.gdgswu.qos.ui.theme.QOSTheme
 import com.gdgswu.qos.ui.theme.*
@@ -160,7 +162,9 @@ val missions = day1Missions
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
-fun WhatToDoScreen(navController: NavController) {
+fun WhatToDoScreen(navController: NavController, homeViewModel: HomeViewModel = viewModel()) {
+    val isOnline by homeViewModel.isOnline.collectAsState()
+    val survivalActions by homeViewModel.survivalActions.collectAsState()
     var selectedDayIndex by remember { mutableStateOf(0) }
     var expandedMissionId by remember { mutableStateOf<Int?>(null) }
     val completedIds = TutorialState.completedMissionIds
@@ -235,21 +239,45 @@ fun WhatToDoScreen(navController: NavController) {
                 }
             }
 
-            // ── 위치 + 온라인 상태 ─────────────────────────────────────────────
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.LocationOn, contentDescription = null,
-                    tint = TextSecondary, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Tenerife Port", fontSize = 12.sp, color = TextSecondary)
-                Spacer(modifier = Modifier.width(16.dp))
-                Icon(Icons.Filled.Wifi, contentDescription = null,
-                    tint = StatusGreen, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Online", fontSize = 12.sp, color = StatusGreen)
+            // ── Survival stage 뱃지 (API) ────────────────────────────────────
+            if (survivalActions != null) {
+                val stage = survivalActions!!.stage.replace("_", " ").replaceFirstChar { it.uppercase() }
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFFFFF3E0))
+                            .padding(horizontal = 14.dp, vertical = 5.dp)
+                    ) {
+                        Text("Stage: $stage", fontSize = 12.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Medium)
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            // ── 온라인 상태 ───────────────────────────────────────────────────
+            if (isOnline != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val onlineColor = if (isOnline == true) StatusGreen else Color(0xFFFF6F00)
+                    Icon(
+                        if (isOnline == true) Icons.Filled.Wifi else Icons.Filled.WifiOff,
+                        contentDescription = null,
+                        tint = onlineColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        if (isOnline == true) "Online" else "Offline — cached data",
+                        fontSize = 12.sp, color = onlineColor
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

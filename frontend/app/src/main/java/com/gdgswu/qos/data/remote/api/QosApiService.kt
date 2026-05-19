@@ -68,6 +68,12 @@ interface QosApiService {
         @Body request: DeadReckoningRequest
     ): Response<LocationResponse>
 
+    /** 수동 위치 핀 수정 */
+    @PUT("location/pin")
+    suspend fun pinLocation(
+        @Body body: Map<String, Double>   // { "lat": ..., "lng": ... }
+    ): Response<LocationResponse>
+
     // ── facilities ─────────────────────────────────────────────────────────────
     // ※ map/ 접두사 없음 — 백엔드 v2 명세 기준
 

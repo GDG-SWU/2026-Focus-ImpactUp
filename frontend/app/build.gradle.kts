@@ -92,6 +92,9 @@ dependencies {
     // 권한 처리
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
+    // OSM 지도 (osmdroid — 키 불필요)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
     // Retrofit + OkHttp (API 통신)
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
