@@ -1,10 +1,10 @@
 package com.example.focus.dto;
 
-import com.example.focus.domain.HealthProfile;
-import com.example.focus.domain.User;
-import com.example.focus.domain.UserAllergy;
-import com.example.focus.domain.UserCompanion;
-import com.example.focus.domain.UserCondition;
+import com.example.focus.domain.user.dto.HealthProfileRequestDto;
+import com.example.focus.domain.user.dto.HealthProfileResponseDto;
+import com.example.focus.domain.user.dto.OnboardRequestDto;
+import com.example.focus.domain.user.dto.UserProfileResponseDto;
+import com.example.focus.domain.user.entity.*;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

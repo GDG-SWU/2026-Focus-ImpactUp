@@ -1,8 +1,9 @@
 package com.example.focus.controller;
 
-import com.example.focus.dto.HealthProfileRequestDto;
-import com.example.focus.dto.OnboardRequestDto;
-import com.example.focus.dto.ProfileUpdateRequestDto;
+import com.example.focus.domain.user.controller.ProfileController;
+import com.example.focus.domain.user.dto.HealthProfileRequestDto;
+import com.example.focus.domain.user.dto.OnboardRequestDto;
+import com.example.focus.domain.user.dto.ProfileUpdateRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
