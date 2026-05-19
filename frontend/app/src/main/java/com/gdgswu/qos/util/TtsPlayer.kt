@@ -1,6 +1,7 @@
 package com.gdgswu.qos.util
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.MediaPlayer
 import com.gdgswu.qos.data.remote.ApiResult
 import com.gdgswu.qos.data.remote.QosRepository
@@ -34,6 +35,12 @@ class TtsPlayer(private val context: Context) {
             try {
                 mediaPlayer?.release()
                 mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
                     setDataSource(tempFile.absolutePath)
                     setOnCompletionListener { it.release() }
                     prepare()
