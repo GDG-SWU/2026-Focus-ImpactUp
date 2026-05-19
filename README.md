@@ -32,6 +32,27 @@
 
 ---
 
+## 시작하기
+
+### 요구사항
+- Android Studio Hedgehog 이상
+- JDK 17
+- Android SDK API 26 이상
+
+### 빌드 방법
+1. 저장소 클론
+   ```bash
+   git clone https://github.com/GDG-SWU/2026-Focus-ImpactUp.git
+   ```
+2. Android Studio에서 `frontend/` 폴더 열기
+3. Gradle Sync 완료 후 에뮬레이터 또는 실기기에서 실행
+
+### 백엔드 연동
+- API Base URL: `https://focus-service-306840608220.asia-northeast3.run.app/api/v1/`
+- GCP Cloud Run (asia-northeast3) 배포 중
+
+---
+
 ## 기술 스택
 
 - Language : Kotlin
