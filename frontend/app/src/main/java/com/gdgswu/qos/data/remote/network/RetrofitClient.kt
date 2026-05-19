@@ -20,15 +20,12 @@ object RetrofitClient {
      */
     private fun authInterceptor(context: Context) = okhttp3.Interceptor { chain ->
         val token = TokenManager.getToken(context)
-        val request = if (token != null) {
-            chain.request().newBuilder()
-                .addHeader("Authorization", "Bearer $token")
-                .addHeader("Accept", "application/json")
-                .build()
-        } else {
-            chain.request()
-        }
-        chain.proceed(request)
+        val userId = TokenManager.getUserId(context)
+        val builder = chain.request().newBuilder()
+            .addHeader("Accept", "application/json")
+        if (token != null) builder.addHeader("Authorization", "Bearer $token")
+        if (userId != null) builder.addHeader("X-User-Id", userId)
+        chain.proceed(builder.build())
     }
 
     /**

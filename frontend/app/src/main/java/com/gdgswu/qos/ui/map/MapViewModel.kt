@@ -223,7 +223,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            when (val result = repository.getFacilities(category)) {
+            when (val result = repository.getFacilities(category = category, lat = lat, lng = lng)) {
                 is ApiResult.Success -> {
                     _facilities.value = result.data.facilities
                     _isLoading.value = false

@@ -2,6 +2,7 @@ package com.gdgswu.qos.data.remote.api
 
 import com.gdgswu.qos.data.remote.model.*
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -84,7 +85,7 @@ interface QosApiService {
         @Query("lat") lat: Double? = null,
         @Query("lng") lng: Double? = null,
         @Query("radius") radius: Int? = null           // 검색 반경 (미터, 기본 5000)
-    ): Response<FacilitiesResponse>
+    ): Response<List<FacilityItem>>
 
     /** 기관 상세 조회 */
     @GET("facilities/{id}")
@@ -116,11 +117,11 @@ interface QosApiService {
 
     // ── tts ────────────────────────────────────────────────────────────────────
 
-    /** 번역 텍스트 TTS 오디오 URL 요청 */
+    /** 번역 텍스트 TTS 오디오 (audio/mpeg 바이너리 직접 반환) */
     @POST("tts/card")
     suspend fun getTtsAudio(
         @Body request: TtsRequest    // text + language
-    ): Response<TtsResponse>
+    ): Response<ResponseBody>
 
     // ── ocr ────────────────────────────────────────────────────────────────────
 

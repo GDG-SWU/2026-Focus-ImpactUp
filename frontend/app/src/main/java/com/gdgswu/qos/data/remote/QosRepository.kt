@@ -110,12 +110,18 @@ class QosRepository(private val context: Context) {
 
     // ── facilities ─────────────────────────────────────────────────────────────
 
-    suspend fun getFacilities(category: String? = null): ApiResult<FacilitiesResponse> {
+    suspend fun getFacilities(
+        category: String? = null,
+        lat: Double? = null,
+        lng: Double? = null
+    ): ApiResult<FacilitiesResponse> {
         return try {
-            val response = api.getFacilities(category = category)
+            val response = api.getFacilities(category = category, lat = lat, lng = lng)
             if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) ApiResult.Success(body)
+                val list = response.body()
+                if (list != null) ApiResult.Success(
+                    FacilitiesResponse(facilities = list, total = list.size, offline = false, cached_at = "")
+                )
                 else ApiResult.Error("Empty response body")
             } else {
                 ApiResult.Error("Error ${response.code()}: ${response.message()}")
@@ -248,9 +254,40 @@ class QosRepository(private val context: Context) {
         }
     }
 
-    suspend fun getTts(text: String, language: String): ApiResult<TtsResponse> {
+    /** TTS — 백엔드가 audio/mpeg 바이너리를 직접 반환 */
+    suspend fun getTtsBytes(text: String, language: String): ApiResult<ByteArray> {
         return try {
             val response = api.getTtsAudio(TtsRequest(text = text, language = language))
+            if (response.isSuccessful) {
+                val bytes = response.body()?.bytes()
+                if (bytes != null && bytes.isNotEmpty()) ApiResult.Success(bytes)
+                else ApiResult.Error("Empty audio response")
+            } else {
+                ApiResult.Error("Error ${response.code()}: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun getPhrasebook(category: String? = null): ApiResult<PhrasebookResponse> {
+        return try {
+            val response = api.getPhrasebook(category)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) ApiResult.Success(body)
+                else ApiResult.Error("Empty response body")
+            } else {
+                ApiResult.Error("Error ${response.code()}: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun getRecentCards(): ApiResult<RecentCardsResponse> {
+        return try {
+            val response = api.getRecentCards()
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) ApiResult.Success(body)

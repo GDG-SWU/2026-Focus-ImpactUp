@@ -15,6 +15,7 @@ import com.gdgswu.qos.data.remote.model.RiskCheckResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -72,22 +73,41 @@ class OcrViewModel : ViewModel() {
         val langCode = UserProfilePrefs.loadLanguage(context).code
         val langBody = langCode.toRequestBody("text/plain".toMediaType())
 
-        when (val ocrResult = repository.scanImage(imagePart, langBody)) {
+        val ocrResult = withTimeoutOrNull(15_000L) { repository.scanImage(imagePart, langBody) }
+            ?: run { _uiState.value = OcrUiState.ScanError("Scan timed out — try again"); return }
+
+        when (ocrResult) {
             is ApiResult.Success -> {
+                if (ocrResult.data.raw_text.isBlank()) {
+                    _uiState.value = OcrUiState.ScanError("No text detected — adjust the frame and try again")
+                    return
+                }
                 val userId = TokenManager.getUserId(context) ?: "unknown"
-                val risk = when (val r = repository.checkRisk(ocrResult.data.raw_text, userId)) {
-                    is ApiResult.Success -> r.data
-                    else -> null
+                val risk = withTimeoutOrNull(8_000L) {
+                    when (val r = repository.checkRisk(ocrResult.data.raw_text, userId)) {
+                        is ApiResult.Success -> r.data
+                        else -> null
+                    }
                 }
                 _uiState.value = OcrUiState.Result(ocrResult.data, risk)
             }
-            is ApiResult.Error -> _uiState.value = OcrUiState.ScanError(ocrResult.message)
+            is ApiResult.Error -> _uiState.value = OcrUiState.ScanError(friendlyError(ocrResult.message))
             else -> {}
         }
     }
 
     fun reset() {
         _uiState.value = OcrUiState.Idle
+    }
+
+    private fun friendlyError(raw: String): String = when {
+        raw.contains("timeout", ignoreCase = true) ||
+        raw.contains("timed out", ignoreCase = true) -> "Scan timed out — try again"
+        raw.contains("Unable to resolve host") ||
+        raw.contains("Failed to connect") -> "No connection — check your network"
+        raw.contains("404") -> "Scanner service unavailable"
+        raw.contains("500") || raw.contains("502") || raw.contains("503") -> "Server error — try again later"
+        else -> "Scan failed — tap shutter to retry"
     }
 
     override fun onCleared() {
