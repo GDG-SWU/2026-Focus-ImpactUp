@@ -234,11 +234,11 @@ data class TtsResponse(
 // ══════════════════════════════════════════════════════════════════════════════
 
 data class OcrScanResponse(
-    val raw_text: String,
-    val translated_text: String,
-    val highlighted_keywords: List<HighlightedKeyword>,
-    val disclaimer: String,
-    val offline: Boolean
+    val raw_text: String?,
+    val translated_text: String?,
+    val highlighted_keywords: List<HighlightedKeyword>?,
+    val disclaimer: String?,
+    val offline: Boolean = false
 )
 
 data class HighlightedKeyword(
