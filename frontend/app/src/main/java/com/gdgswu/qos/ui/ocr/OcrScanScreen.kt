@@ -347,10 +347,10 @@ fun ScanResultCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             // 번역 텍스트
-            if (ocr.translated_text.isNotBlank()) {
+            if (!ocr.translated_text.isNullOrBlank()) {
                 Text("Translation", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF999999))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(ocr.translated_text, fontSize = 13.sp, color = Color(0xFF1A1A1A), lineHeight = 18.sp)
+                Text(ocr.translated_text.orEmpty(), fontSize = 13.sp, color = Color(0xFF1A1A1A), lineHeight = 18.sp)
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
@@ -377,7 +377,7 @@ fun ScanResultCard(
 
             // 면책 고지
             Text(
-                ocr.disclaimer,
+                ocr.disclaimer.orEmpty(),
                 fontSize = 10.sp, color = Color(0xFFAAAAAA), lineHeight = 14.sp,
                 modifier = Modifier
                     .fillMaxWidth()
