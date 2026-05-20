@@ -11,7 +11,12 @@ import com.example.focus.domain.user.dto.OnboardResponseDto;
 import com.example.focus.domain.user.dto.UserProfileResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
+import java.security.Key;
+import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -20,6 +25,11 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final HealthProfileRepository healthProfileRepository;
+
+    private final Key jwtSecretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+    // 토큰 만료 시간
+    private final long accessTokenValidityInMilliseconds = 7200000;
 
     public UserServiceImpl(UserRepository userRepository, HealthProfileRepository healthProfileRepository) {
         this.userRepository = userRepository;
@@ -54,10 +64,23 @@ public class UserServiceImpl implements UserService {
             userRepository.save(savedUser);
         }
 
+        long now = (new Date()).getTime();
+        Date validity = new Date(now + this.accessTokenValidityInMilliseconds);
+
+        String userIdStr = savedUser.getId();
+
+        String realAccessToken = Jwts.builder()
+                .setSubject(userIdStr)
+                .claim("role", "ROLE_USER")
+                .setIssuedAt(new Date())
+                .setExpiration(validity)
+                .signWith(jwtSecretKey, SignatureAlgorithm.HS256)
+                .compact();
+
         UserProfileResponseDto profileDto = new UserProfileResponseDto(savedUser, false);
 
         OnboardResponseDto responseDto = new OnboardResponseDto();
-        responseDto.setAccessToken("mock_access_token_xyz");
+        responseDto.setAccessToken(realAccessToken);
         responseDto.setUserProfile(profileDto);
 
         return responseDto;
