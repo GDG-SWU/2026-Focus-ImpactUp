@@ -31,7 +31,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         preferredLanguage: String,
         conditions: List<String>,
         allergies: List<String>,
-        companions: List<String>
+        companions: List<String>,
+        bloodType: String? = null
     ) {
         viewModelScope.launch {
             _uiState.value = OnboardingUiState.Loading
@@ -41,7 +42,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                 preferred_language = preferredLanguage,
                 health_info = HealthInfoRequest(
                     conditions = conditions,
-                    allergies = allergies
+                    allergies = allergies,
+                    blood_type = bloodType
                 ),
                 companions = companions
             )

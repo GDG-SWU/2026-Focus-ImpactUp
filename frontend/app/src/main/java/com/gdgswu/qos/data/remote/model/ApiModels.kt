@@ -20,8 +20,8 @@ data class OnboardRequest(
 
 data class HealthInfoRequest(
     val conditions: List<String>,
-    val allergies: List<String>
-    // companion_info 제거됨
+    val allergies: List<String>,
+    val blood_type: String? = null
 )
 
 data class UpdateProfileRequest(
@@ -46,8 +46,9 @@ data class UserProfileResponse(
 
 // health 객체 — user_id/updated_at/offline 제거됨
 data class SimpleHealthResponse(
-    val conditions: List<String>,
-    val allergies: List<String>
+    val conditions: List<String>?,
+    val allergies: List<String>?,
+    val blood_type: String? = null
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
