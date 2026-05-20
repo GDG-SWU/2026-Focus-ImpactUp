@@ -201,23 +201,26 @@ fun SosCardScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // 번역된 건강 항목 표시
-                    if (card.conditions_translated.isNotEmpty()) {
+                    val conditions = card.conditions_translated.orEmpty()
+                    val allergies = card.allergies_translated.orEmpty()
+
+                    if (conditions.isNotEmpty()) {
                         Text("CONDITIONS".uppercase(), fontSize = 11.sp, color = TextSecondary,
                             fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            card.conditions_translated.mapNotNull { it.label[langCode] }.joinToString(", ").ifBlank { "None" },
+                            conditions.mapNotNull { it.label[langCode] }.joinToString(", ").ifBlank { "None" },
                             fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    if (card.allergies_translated.isNotEmpty()) {
+                    if (allergies.isNotEmpty()) {
                         Text("ALLERGIES".uppercase(), fontSize = 11.sp, color = TextSecondary,
                             fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            card.allergies_translated.mapNotNull { it.label[langCode] }.joinToString(", ").ifBlank { "None" },
+                            allergies.mapNotNull { it.label[langCode] }.joinToString(", ").ifBlank { "None" },
                             fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
