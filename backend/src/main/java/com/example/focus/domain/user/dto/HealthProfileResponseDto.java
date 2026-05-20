@@ -14,11 +14,13 @@ import java.util.List;
 public class HealthProfileResponseDto {
 
     private List<String> conditions = new ArrayList<>();
+    private String bloodType;
     private List<String> allergies = new ArrayList<>();
 
     public HealthProfileResponseDto(HealthProfile healthProfile) {
         if (healthProfile != null) {
             this.conditions = new ArrayList<>(healthProfile.getConditions());
+            this.bloodType = healthProfile.getBloodType();
             this.allergies = new ArrayList<>(healthProfile.getAllergies());
         }
     }

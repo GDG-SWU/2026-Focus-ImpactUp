@@ -51,7 +51,7 @@ public class UserServiceImpl implements UserService {
         // 기저질환, 알레르기정보 연동
         if (requestDto.getHealthInfo() != null) {
 
-            HealthProfile healthProfile = new HealthProfile(savedUser);
+            HealthProfile healthProfile = new HealthProfile(savedUser, requestDto.getHealthInfo().getBloodType());
             savedUser.setHealthProfile(healthProfile);
 
             if (requestDto.getHealthInfo().getConditions() != null) {
@@ -102,6 +102,33 @@ public class UserServiceImpl implements UserService {
 
         if (requestDto.getPreferredLanguage() != null) {
             user.updatePreferredLanguage(requestDto.getPreferredLanguage());
+        }
+
+        if (requestDto.getHealthInfo() != null) {
+            HealthProfile healthProfile = user.getHealthProfile();
+
+            // 혹시 온보딩 때 건강 정보를 입력 안 했던 올드 유저라면 새 프로필 생성 분기 처리
+            if (healthProfile == null) {
+                healthProfile = new HealthProfile(user, requestDto.getHealthInfo().getBloodType());
+                user.setHealthProfile(healthProfile);
+            } else {
+                // 기존 프로필이 있다면 혈액형 단일 변수를 비즈니스 메서드로 안전하게 수정
+                healthProfile.updateBloodType(requestDto.getHealthInfo().getBloodType());
+            }
+
+            // 기저질환 리스트 컬렉션 초기화 및 최신화
+            if (requestDto.getHealthInfo().getConditions() != null) {
+                healthProfile.getConditions().clear();
+                healthProfile.getConditions().addAll(requestDto.getHealthInfo().getConditions());
+            }
+
+            // 알레르기 리스트 컬렉션 초기화 및 최신화
+            if (requestDto.getHealthInfo().getAllergies() != null) {
+                healthProfile.getAllergies().clear();
+                healthProfile.getAllergies().addAll(requestDto.getHealthInfo().getAllergies());
+            }
+
+            userRepository.save(user); // 더티 체킹이 작동하지만 안전하게 영속성 명시
         }
 
         return new UserProfileResponseDto(user, false);
