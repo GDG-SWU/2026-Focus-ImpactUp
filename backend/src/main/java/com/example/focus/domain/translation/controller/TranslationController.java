@@ -1,6 +1,8 @@
 package com.example.focus.domain.translation.controller;
 
 import com.example.focus.domain.translation.service.TtsService;
+import com.example.focus.domain.user.entity.User;
+import com.example.focus.domain.user.repository.UserRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,9 +17,11 @@ import java.util.*;
 public class TranslationController {
 
     private final TtsService ttsService;
+    private final UserRepository userRepository;
 
-    public TranslationController(TtsService ttsService) {
+    public TranslationController(TtsService ttsService, UserRepository userRepository) {
         this.ttsService = ttsService;
+        this.userRepository = userRepository;
     }
 
     // 오프라인 번역 카드 목록 조회
@@ -46,18 +50,47 @@ public class TranslationController {
         return ResponseEntity.ok().body(response);
     }
 
-    // 내 정보 SOS 카드 조회 (건강 프로필 연동)
+    // 내 정보 SOS 카드 조회
     @GetMapping("/cards/sos")
-    public ResponseEntity<Map<String, Object>> getSosCard() {
-        // TODO: 로그인된 사용자의 유저 식별자 검증하고 Health Profile에서 조건 파싱
+    public ResponseEntity<Map<String, Object>> getSosCard(
+            @RequestHeader("X-User-Id") String userIdStr) {
+
+        User user = userRepository.findById(userIdStr)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다. ID: " + userIdStr));
+
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("user_id", UUID.randomUUID().toString());
+        response.put("user_id", user.getId());
         response.put("generated_at", LocalDateTime.now().toString());
+
+        Map<String, String> translationMap = new HashMap<>();
+        translationMap.put("asthma", "Asma");
+        translationMap.put("diabetes", "Diabetes");
+        translationMap.put("peanut_allergy", "Alergia al maní");
+
+        List<String> conditionsTranslated = new ArrayList<>();
+        List<String> allergiesTranslated = new ArrayList<>();
+
+        if (user.getHealthProfile() != null) {
+            if (user.getHealthProfile().getConditions() != null) {
+                for (String condition : user.getHealthProfile().getConditions()) {
+                    conditionsTranslated.add(translationMap.getOrDefault(condition, condition));
+                }
+            }
+            if (user.getHealthProfile().getAllergies() != null) {
+                for (String allergy : user.getHealthProfile().getAllergies()) {
+                    allergiesTranslated.add(translationMap.getOrDefault(allergy, allergy));
+                }
+            }
+        }
 
         Map<String, String> translations = new HashMap<>();
         translations.put("ar", "لدي مرض السكري وحساسية من البنسلين.");
         translations.put("fr", "J'ai le diabète et une allergie à la pénicilline.");
         response.put("translations", translations);
+
+        response.put("conditions_translated", conditionsTranslated);
+        response.put("allergies_translated", allergiesTranslated);
+
         response.put("offline", false);
 
         return ResponseEntity.ok().body(response);
@@ -92,7 +125,12 @@ public class TranslationController {
 
     // 최근 사용 카드 조회
     @GetMapping("/cards/recent")
-    public ResponseEntity<Map<String, Object>> getRecentCards() {
+    public ResponseEntity<Map<String, Object>> getRecentCards(
+            @RequestHeader("X-User-Id") String userIdStr) {
+
+        User user = userRepository.findById(userIdStr)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다. ID: " + userIdStr));
+
         Map<String, Object> response = new HashMap<>();
 
         List<com.example.focus.domain.translation.dto.PhraseCardDto> mockCards = new ArrayList<>();
@@ -108,6 +146,7 @@ public class TranslationController {
         mockCards.add(new com.example.focus.domain.translation.dto.PhraseCardDto("card_01", "의료 요청", translation1, true));
         mockCards.add(new com.example.focus.domain.translation.dto.PhraseCardDto("card_02", "위치 문의", translation2, true));
 
+        response.put("user_id", user.getId());
         response.put("cards", mockCards);
         response.put("offline", false);
 
