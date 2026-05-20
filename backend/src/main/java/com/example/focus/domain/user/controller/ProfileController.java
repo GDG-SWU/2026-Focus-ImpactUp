@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProfileController {
 
-    private final UserService userService; // 🌟 진짜 서비스 연결고리 장착!
+    private final UserService userService;
 
     /**
      * 1. 사용자 통합 온보딩 (POST /api/v1/users/onboard)
@@ -34,6 +34,8 @@ public class ProfileController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + responseBody.getAccessToken());
+        headers.set("X-User-Id", responseBody.getUserProfile().getUserId().toString());
+        headers.set("Access-Control-Expose-Headers", "Authorization, X-User-Id");
 
         return new ResponseEntity<>(responseBody, headers, HttpStatus.CREATED);
     }
