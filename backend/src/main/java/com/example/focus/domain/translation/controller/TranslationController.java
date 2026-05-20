@@ -12,16 +12,21 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import com.example.focus.domain.translation.entity.MedicalTerm;
+import com.example.focus.domain.translation.repository.MedicalTermRepository;
+
 @RestController
 @RequestMapping("/api/v1")
 public class TranslationController {
 
     private final TtsService ttsService;
     private final UserRepository userRepository;
+    private final MedicalTermRepository medicalTermRepository;
 
-    public TranslationController(TtsService ttsService, UserRepository userRepository) {
+    public TranslationController(TtsService ttsService, UserRepository userRepository, MedicalTermRepository medicalTermRepository) {
         this.ttsService = ttsService;
         this.userRepository = userRepository;
+        this.medicalTermRepository = medicalTermRepository;
     }
 
     // 오프라인 번역 카드 목록 조회
@@ -62,35 +67,79 @@ public class TranslationController {
         response.put("user_id", user.getId());
         response.put("generated_at", LocalDateTime.now().toString());
 
-        Map<String, String> translationMap = new HashMap<>();
-        translationMap.put("asthma", "Asma");
-        translationMap.put("diabetes", "Diabetes");
-        translationMap.put("peanut_allergy", "Alergia al maní");
+//        response.put("blood_type", "O+");
+//        response.put("companions", "Traveling with children");
 
-        List<String> conditionsTranslated = new ArrayList<>();
-        List<String> allergiesTranslated = new ArrayList<>();
+        List<Map<String, Object>> conditionsTranslated = new ArrayList<>();
+        List<Map<String, Object>> allergiesTranslated = new ArrayList<>();
+
+        List<String> fixedLanguages = List.of("ar", "fr", "wo", "ma", "fu");
+
+        Map<String, String> dynamicTranslations = new LinkedHashMap<>();
+
+        Map<String, String> prefixMap = Map.of(
+                "ar", "معلوماتي الصحية: ",
+                "fr", "Mes informations medicales: ",
+                "wo", "Mbaaxu wér-gi-yaram: ",
+                "ma", "N ninsi nali: ",
+                "fu", "Jam wér-gi-yaram: "
+        );
+
+        for (String lang : fixedLanguages) {
+            dynamicTranslations.put(lang, prefixMap.getOrDefault(lang, ""));
+        }
 
         if (user.getHealthProfile() != null) {
+
+            // 기저질환
             if (user.getHealthProfile().getConditions() != null) {
-                for (String condition : user.getHealthProfile().getConditions()) {
-                    conditionsTranslated.add(translationMap.getOrDefault(condition, condition));
+                for (String conditionCode : user.getHealthProfile().getConditions()) {
+                    Map<String, Object> conditionNode = new LinkedHashMap<>();
+                    conditionNode.put("code", conditionCode);
+
+                    List<MedicalTerm> terms = medicalTermRepository.findByTermCode(conditionCode);
+                    Map<String, String> labelMap = new LinkedHashMap<>();
+                    for (String lang : fixedLanguages) { labelMap.put(lang, ""); }
+
+                    for (MedicalTerm term : terms) {
+                        if (fixedLanguages.contains(term.getLangCode())) {
+                            labelMap.put(term.getLangCode(), term.getTranslatedText());
+
+                            dynamicTranslations.computeIfPresent(term.getLangCode(), (lang, sentence) -> sentence + term.getTranslatedText() + " ");
+                        }
+                    }
+                    conditionNode.put("label", labelMap);
+                    conditionsTranslated.add(conditionNode);
                 }
             }
+
+            // 알레르기
             if (user.getHealthProfile().getAllergies() != null) {
-                for (String allergy : user.getHealthProfile().getAllergies()) {
-                    allergiesTranslated.add(translationMap.getOrDefault(allergy, allergy));
+                for (String allergyCode : user.getHealthProfile().getAllergies()) {
+                    Map<String, Object> allergyNode = new LinkedHashMap<>();
+                    allergyNode.put("code", allergyCode);
+
+                    List<MedicalTerm> terms = medicalTermRepository.findByTermCode(allergyCode);
+                    Map<String, String> labelMap = new LinkedHashMap<>();
+                    for (String lang : fixedLanguages) { labelMap.put(lang, ""); }
+
+                    for (MedicalTerm term : terms) {
+                        if (fixedLanguages.contains(term.getLangCode())) {
+                            labelMap.put(term.getLangCode(), term.getTranslatedText());
+
+                            dynamicTranslations.computeIfPresent(term.getLangCode(), (lang, sentence) -> sentence + term.getTranslatedText() + " ");
+                        }
+                    }
+                    allergyNode.put("label", labelMap);
+                    allergiesTranslated.add(allergyNode);
                 }
             }
         }
 
-        Map<String, String> translations = new HashMap<>();
-        translations.put("ar", "لدي مرض السكري وحساسية من البنسلين.");
-        translations.put("fr", "J'ai le diabète et une allergie à la pénicilline.");
-        response.put("translations", translations);
+        response.put("translations", dynamicTranslations);
 
         response.put("conditions_translated", conditionsTranslated);
         response.put("allergies_translated", allergiesTranslated);
-
         response.put("offline", false);
 
         return ResponseEntity.ok().body(response);

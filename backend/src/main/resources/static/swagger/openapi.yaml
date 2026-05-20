@@ -645,7 +645,6 @@ components:
         situation:
           type: string
           example: "나는 당뇨병이 있습니다"
-          description: 한국어 원문 상황
         translations:
           type: object
           description: 언어 코드 → 번역 텍스트
@@ -655,8 +654,8 @@ components:
             ar: "أنا مريض بالسكري"
             fr: "Je suis diabétique"
             wo: "Dafa am sukar"
-            ff: "Mi wonaa diabete"
-            ha: "Ina da ciwon sukari"
+            ma: "Mi wonaa diabete"
+            fu: "Ina da ciwon sukari"
         tts_available:
           type: boolean
           example: true
@@ -687,39 +686,55 @@ components:
           format: date-time
         translations:
           type: object
-          description: 언어 코드 → 건강정보 번역 텍스트
+          description: 언어 코드 → 번역 문장 (Read aloud용)
           additionalProperties:
             type: string
           example:
-            ar: "لدي مرض السكري وحساسية من البنسلين. أتناول الميتفورمين."
-            fr: "J'ai le diabète et une allergie à la pénicilline. Je prends de la metformine."
+            ar: "معلوماتي الصحية: السكري "
+            fr: "Mes informations medicales: Diabète "
+            wo: "Mbaaxu wér-gi-yaram: Dafa am sukar (당뇨) "
+            ma: "N ninsi nali: Diabetes "
+            fu: "Jam wér-gi-yaram: Diabetes "
         conditions_translated:
           type: array
+          description: 기저질환 다국어 리스트
           items:
             type: object
             properties:
               code:
                 type: string
-                example: diabetes
+                example: "diabetes"
               label:
                 type: object
+                description: 언어 코드 → 질환명 번역
                 additionalProperties:
                   type: string
                 example:
                   ar: "السكري"
                   fr: "Diabète"
+                  wo: "Dafa am sukar (당뇨)"
+                  ma: "Diabetes"
+                  fu: "Diabetes"
         allergies_translated:
           type: array
+          description: 알레르기 다국어 리스트
           items:
             type: object
             properties:
               code:
                 type: string
-                example: penicillin
+                example: "penicillin"
               label:
                 type: object
+                description: 언어 코드 → 알레르기명 번역
                 additionalProperties:
                   type: string
+                example:
+                  ar: "حساسية البنسلين"
+                  fr: "Allergie à la pénicilline"
+                  wo: "Penicillin"
+                  ma: "Penicillin"
+                  fu: "Penicillin"
         offline:
           type: boolean
 
@@ -733,7 +748,7 @@ components:
           description: TTS 변환할 텍스트
         language:
           type: string
-          enum: [ar, fr, wo, ff, ha]
+          enum: [ar, fr, wo, ma, fu]
           example: ar
           description: 대상 언어 코드
 
@@ -1508,7 +1523,7 @@ paths:
                   description: 촬영 이미지 파일 (JPEG/PNG, 최대 10MB)
                 target_language:
                   type: string
-                  enum: [ar, fr, wo, ff, ha]
+                  enum: [ar, fr, wo, ma, fu]
                   description: 번역 대상 언어 (미입력 시 사용자 설정 언어)
       responses:
         '200':
