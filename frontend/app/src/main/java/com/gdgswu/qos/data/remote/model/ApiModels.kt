@@ -202,15 +202,15 @@ data class RecentCardsResponse(
 data class SosCardResponse(
     val user_id: String,
     val generated_at: String,
-    val translations: Map<String, String>,
-    val conditions_translated: List<TranslatedHealthItem>,
-    val allergies_translated: List<TranslatedHealthItem>,
-    val offline: Boolean
+    val translations: Map<String, String> = emptyMap(),
+    val conditions_translated: List<TranslatedHealthItem> = emptyList(),
+    val allergies_translated: List<TranslatedHealthItem> = emptyList(),
+    val offline: Boolean = false
 )
 
 data class TranslatedHealthItem(
     val code: String,
-    val label: Map<String, String>
+    val label: Map<String, String> = emptyMap()
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
