@@ -181,7 +181,7 @@ fun SosCardScreen(
                     // API 데이터 우선 표시
                     val card = apiSosCard!!
                     val langCode = selectedLanguage.code
-                    val translatedSentence = card.translations[langCode]
+                    val translatedSentence = card.translations?.get(langCode)
 
                     if (translatedSentence != null) {
                         Text(
