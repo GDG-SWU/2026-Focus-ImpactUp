@@ -67,8 +67,11 @@ public class TranslationController {
         response.put("user_id", user.getId());
         response.put("generated_at", LocalDateTime.now().toString());
 
-//        response.put("blood_type", "O+");
-//        response.put("companions", "Traveling with children");
+        if (user.getHealthProfile() != null) {
+            response.put("blood_type", user.getHealthProfile().getBloodType());
+        } else {
+            response.put("blood_type", "unknown"); // 정보가 없을 때
+        }
 
         List<Map<String, Object>> conditionsTranslated = new ArrayList<>();
         List<Map<String, Object>> allergiesTranslated = new ArrayList<>();

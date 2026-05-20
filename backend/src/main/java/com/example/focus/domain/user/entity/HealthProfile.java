@@ -29,10 +29,19 @@ public class HealthProfile {
     @Column(name = "condition_code", nullable = false)
     private List<String> conditions = new ArrayList<>();
 
+    @Column(name = "blood_type", length = 10)
+    private String bloodType;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "user_allergies", joinColumns = @JoinColumn(name = "health_profile_id"))
     @Column(name = "allergy_code", nullable = false)
     private List<String> allergies = new ArrayList<>();
+
+    public HealthProfile(User user, String bloodType) {
+        this.user = user;
+        this.bloodType = bloodType;
+        this.updatedAt = LocalDateTime.now();
+    }
 
     public HealthProfile(User user) {
         this.user = user;
@@ -41,6 +50,10 @@ public class HealthProfile {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public void updateBloodType(String bloodType) {
+        this.bloodType = bloodType;
     }
 
     @PreUpdate

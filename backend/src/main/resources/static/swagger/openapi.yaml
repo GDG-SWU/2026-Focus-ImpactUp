@@ -215,6 +215,10 @@ components:
     HealthProfileRequest:
       type: object
       properties:
+        blood_type:
+          type: string
+          example: "O+"
+          description: "혈액형"
         conditions:
           type: array
           items:
@@ -232,6 +236,10 @@ components:
       type: object
       required: [ conditions, allergies ]
       properties:
+        blood_type:
+          type: string
+          example: "O+"
+          description: "혈액형"
         conditions:
           type: array
           items:
@@ -684,6 +692,12 @@ components:
         generated_at:
           type: string
           format: date-time
+        blood_type:
+          type: string
+          example: "O+"
+        companions:
+          type: string
+          example: "Traveling with children"
         translations:
           type: object
           description: 언어 코드 → 번역 문장 (Read aloud용)
