@@ -48,10 +48,13 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
             when (val result = repository.onboard(request)) {
                 is ApiResult.Success -> {
-                    TokenManager.saveUserId(
-                        getApplication<Application>().applicationContext,
-                        result.data.user_id
-                    )
+                    val userId = result.data.user_id
+                    if (userId != null) {
+                        TokenManager.saveUserId(
+                            getApplication<Application>().applicationContext,
+                            userId
+                        )
+                    }
                     _uiState.value = OnboardingUiState.Success
                 }
                 is ApiResult.Error -> {

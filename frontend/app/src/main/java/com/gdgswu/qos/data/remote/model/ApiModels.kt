@@ -33,15 +33,15 @@ data class UpdateProfileRequest(
 
 // POST /users/onboard, GET /users/profile, PATCH /users/profile 공통 응답
 data class UserProfileResponse(
-    val user_id: String,
+    val user_id: String?,
     val preferred_language: String,
-    val locale: String,
-    val onboarding_completed: Boolean,
-    val created_at: String,
-    val updated_at: String,
-    val offline: Boolean,
-    val health: SimpleHealthResponse,
-    val companions: List<String>          // ["child", "pregnant"]
+    val locale: String?,
+    val onboarding_completed: Boolean = false,
+    val created_at: String?,
+    val updated_at: String?,
+    val offline: Boolean = false,
+    val health: SimpleHealthResponse?,
+    val companions: List<String>?
 )
 
 // health 객체 — user_id/updated_at/offline 제거됨
