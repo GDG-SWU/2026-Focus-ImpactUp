@@ -71,11 +71,7 @@ fun SosCardScreen(
         "Companions" to companionText
     )
 
-    var selectedLanguage by remember { mutableStateOf(UserProfilePrefs.loadLanguage(context)) }
-    // SOS 카드는 번역 대상 언어이므로 English면 French로 fallback
-    if (selectedLanguage == SupportedLanguage.ENGLISH) {
-        selectedLanguage = SupportedLanguage.FRENCH
-    }
+    var selectedLanguage by remember { mutableStateOf(SupportedLanguage.ENGLISH) }
 
     Column(
         modifier = Modifier
@@ -124,7 +120,7 @@ fun SosCardScreen(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(SupportedLanguage.entries.filter { it != SupportedLanguage.ENGLISH }) { lang ->
+            items(SupportedLanguage.entries) { lang ->
                 val isSelected = selectedLanguage == lang
                 FilterChip(
                     selected = isSelected,
@@ -182,9 +178,9 @@ fun SosCardScreen(
                     val card = apiSosCard!!
                     val langCode = selectedLanguage.code
 
-                    // 알레르기 — 번역 label 우선, 없으면 code(영어) 표시
+                    // 알레르기 — 번역 label 우선, 빈 문자열이거나 없으면 code(영어) 표시
                     val allergyLabels = card.allergies_translated.orEmpty()
-                        .map { it.label[langCode] ?: it.code }
+                        .map { item -> item.label[langCode]?.takeIf { it.isNotBlank() } ?: item.code }
                         .ifEmpty { allergies }
                     SosCardRow(
                         label = "Allergies",
@@ -192,9 +188,9 @@ fun SosCardScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // 컨디션 — 번역 label 우선, 없으면 code(영어) 표시
+                    // 컨디션 — 번역 label 우선, 빈 문자열이거나 없으면 code(영어) 표시
                     val conditionLabels = card.conditions_translated.orEmpty()
-                        .map { it.label[langCode] ?: it.code }
+                        .map { item -> item.label[langCode]?.takeIf { it.isNotBlank() } ?: item.code }
                         .ifEmpty { conditions }
                     SosCardRow(
                         label = "Conditions",
