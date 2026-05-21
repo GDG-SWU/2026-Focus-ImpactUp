@@ -47,3 +47,15 @@ INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('sulfo
 INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('sulfonamide', 'wo', 'Sulfonamide');
 INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('sulfonamide', 'ma', 'Sulfonamide');
 INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('sulfonamide', 'fu', 'Sulfonamide');
+
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('aspirin', 'ar', 'حساسية الأسبرين');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('aspirin', 'fr', 'Allergie à l''aspirine');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('aspirin', 'wo', 'Aspirin');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('aspirin', 'ma', 'Aspirin');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('aspirin', 'fu', 'Aspirin');
+
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('ibuprofen', 'ar', 'حساسية الإيبوبروفين');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('ibuprofen', 'fr', 'Allergie à l''ibuprofène');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('ibuprofen', 'wo', 'Ibuprofen');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('ibuprofen', 'ma', 'Ibuprofen');
+INSERT INTO medical_terms (term_code, lang_code, translated_text) VALUES ('ibuprofen', 'fu', 'Ibuprofen')
