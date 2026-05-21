@@ -18,6 +18,13 @@ data class OnboardRequest(
     val companions: List<String>          // ["child", "pregnant"] — 최상위로 이동
 )
 
+// POST /users/onboard 실제 응답 구조 (accessToken + userProfile 래핑)
+data class OnboardResponse(
+    val accessToken: String?,
+    val expiresIn: Long?,
+    val userProfile: UserProfileResponse?
+)
+
 data class HealthInfoRequest(
     val conditions: List<String>,
     val allergies: List<String>,

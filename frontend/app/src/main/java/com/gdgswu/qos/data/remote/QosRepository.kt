@@ -21,8 +21,17 @@ class QosRepository(private val context: Context) {
             val response = api.onboard(request)
             if (response.isSuccessful) {
                 val body = response.body()
-                if (body != null) ApiResult.Success(body)
-                else ApiResult.Error("Empty response body")
+                if (body != null) {
+                    // JWT 토큰을 응답 바디(accessToken)에서 저장 — 헤더가 아님!
+                    body.accessToken?.let { TokenManager.saveToken(context, it) }
+                    // userProfile에서 user_id 저장
+                    body.userProfile?.user_id?.let { TokenManager.saveUserId(context, it) }
+                    ApiResult.Success(body.userProfile ?: UserProfileResponse(
+                        user_id = null, preferred_language = "", locale = null,
+                        onboarding_completed = true, created_at = null, updated_at = null,
+                        health = null, companions = null
+                    ))
+                } else ApiResult.Error("Empty response body")
             } else {
                 ApiResult.Error("Error ${response.code()}: ${response.message()}")
             }

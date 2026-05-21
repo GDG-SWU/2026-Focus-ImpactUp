@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gdgswu.qos.data.remote.ApiResult
 import com.gdgswu.qos.data.remote.QosRepository
-import com.gdgswu.qos.data.remote.TokenManager
 import com.gdgswu.qos.data.remote.model.HealthInfoRequest
 import com.gdgswu.qos.data.remote.model.OnboardRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,13 +49,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
             when (val result = repository.onboard(request)) {
                 is ApiResult.Success -> {
-                    val userId = result.data.user_id
-                    if (userId != null) {
-                        TokenManager.saveUserId(
-                            getApplication<Application>().applicationContext,
-                            userId
-                        )
-                    }
+                    // 토큰 및 userId는 QosRepository.onboard() 내부에서 저장됨
                     _uiState.value = OnboardingUiState.Success
                 }
                 is ApiResult.Error -> {

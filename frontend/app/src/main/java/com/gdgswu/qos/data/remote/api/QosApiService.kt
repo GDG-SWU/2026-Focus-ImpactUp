@@ -14,7 +14,7 @@ interface QosApiService {
     @POST("users/onboard")
     suspend fun onboard(
         @Body request: OnboardRequest
-    ): Response<UserProfileResponse>
+    ): Response<OnboardResponse>
 
     /** 프로필 전체 조회 */
     @GET("users/profile")
