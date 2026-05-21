@@ -1,0 +1,88 @@
+<mxfile host="app.diagrams.net" modified="2026-05-21" version="21.6.5">
+  <diagram id="qos-arch" name="QOS System Architecture">
+    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ══════════════ Google Cloud Wrapper ══════════════ -->
+        <mxCell id="gcp" value="&lt;font style=&quot;font-size:14px; font-weight:bold; color:#4285F4;&quot;&gt;☁  Google Cloud&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#4285F4;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=14;spacingTop=10;fontSize=13;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="590" height="480" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Database Box ══════════════ -->
+        <mxCell id="db" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Database&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🐬&lt;/font&gt;  &lt;b&gt;MySQL&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Cloud SQL&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔑&lt;/font&gt;  &lt;b&gt;Secret Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Credentials&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="42" y="72" width="162" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ AI/ML Box ══════════════ -->
+        <mxCell id="aiml" value="&lt;b style=&quot;font-size:12px;&quot;&gt;AI / ML&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;📷&lt;/font&gt;  &lt;b&gt;ML Kit OCR&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;On-device Vision&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔊&lt;/font&gt;  &lt;b&gt;Google TTS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;5 languages&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🤖&lt;/font&gt;  &lt;b&gt;Translation AI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Real-time&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="42" y="268" width="162" height="208" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Server Box ══════════════ -->
+        <mxCell id="server" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Server&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🌿&lt;/font&gt;  &lt;b&gt;Spring Boot&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Java 21&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;☁&lt;/font&gt;  &lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;asia-northeast3&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🐳&lt;/font&gt;  &lt;b&gt;Docker&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Artifact Registry&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔁&lt;/font&gt;  &lt;b&gt;Cloud Build&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;CI/CD Auto Deploy&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="232" y="72" width="168" height="408" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Auth Box ══════════════ -->
+        <mxCell id="auth" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Auth&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔐&lt;/font&gt;  &lt;b&gt;JWT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Bearer Token&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🆔&lt;/font&gt;  &lt;b&gt;X-User-Id&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Request Header&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="638" y="72" width="155" height="155" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Offline Box ══════════════ -->
+        <mxCell id="offline" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Offline&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🗺&lt;/font&gt;  &lt;b&gt;Mapbox Tiles&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Offline Maps&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;💾&lt;/font&gt;  &lt;b&gt;TTS Cache&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;MP3 · SharedPrefs&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="638" y="248" width="155" height="155" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Client Box ══════════════ -->
+        <mxCell id="client" value="&lt;b style=&quot;font-size:13px;&quot;&gt;Client&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:30px;&quot;&gt;🤖&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:13px;&quot;&gt;Android&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Kotlin&lt;br&gt;Jetpack Compose&lt;br&gt;MVVM&lt;br&gt;Retrofit + OkHttp&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=14;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="828" y="72" width="130" height="250" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Management Box ══════════════ -->
+        <mxCell id="mgmt" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Management&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;&quot;&gt;🐙  &lt;b&gt;GitHub&lt;/b&gt;&lt;/font&gt;  &amp;nbsp;&amp;nbsp;&amp;nbsp;  &lt;font style=&quot;font-size:12px;&quot;&gt;🔁  &lt;b&gt;Cloud Build CI/CD&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="20" y="524" width="440" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ API Spec Box ══════════════ -->
+        <mxCell id="apispec" value="&lt;b style=&quot;font-size:12px;&quot;&gt;API Spec&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;&quot;&gt;📡  &lt;b&gt;REST API&lt;/b&gt;  (HTTPS · JSON)&lt;/font&gt;  &amp;nbsp;&amp;nbsp;  &lt;font style=&quot;font-size:12px;&quot;&gt;📮  &lt;b&gt;Postman Collection&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=12;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="480" y="524" width="478" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════ Arrows ══════════════ -->
+
+        <!-- DB ↔ Server -->
+        <mxCell id="e1" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="db" target="server" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- AI/ML ↔ Server -->
+        <mxCell id="e2" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="aiml" target="server" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Server → Auth -->
+        <mxCell id="e3" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="server" target="auth" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Server → Offline -->
+        <mxCell id="e4" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.6;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="server" target="offline" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Auth ↔ Client -->
+        <mxCell id="e5" value="HTTPS · REST API" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;fontSize=10;" edge="1" source="auth" target="client" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Offline ↔ Client -->
+        <mxCell id="e6" value="Cache Sync" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.6;entryDx=0;entryDy=0;fontSize=10;" edge="1" source="offline" target="client" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
