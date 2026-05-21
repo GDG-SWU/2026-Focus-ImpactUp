@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QOS Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f1117;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px;
+  }
+  .canvas {
+    width: 1100px;
+    background: #0f1117;
+    padding: 40px;
+  }
+  .title {
+    text-align: center;
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 40px;
+  }
+
+  .row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Layer label ── */
+  .layer-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    color: #555;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    min-width: 28px;
+  }
+
+  /* ── Box ── */
+  .box {
+    border-radius: 12px;
+    padding: 14px 18px;
+    position: relative;
+  }
+  .box-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.7;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .chip {
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ── Arrow ── */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin: 4px 0;
+  }
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .arrow-line {
+    width: 2px;
+    height: 22px;
+    background: linear-gradient(to bottom, #444, #666);
+  }
+  .arrow-head {
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #666;
+  }
+  .arrow-label {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  /* ── Colors ── */
+  /* Frontend */
+  .c-front { background: #1a1f3a; border: 1.5px solid #3a4a8a; }
+  .c-front .box-title { color: #7b9cff; }
+  .c-front .chip { background: #252d5a; color: #a0b4ff; border: 1px solid #3a4a8a; }
+
+  /* Network */
+  .c-net { background: #1a2a1a; border: 1.5px solid #3a7a3a; }
+  .c-net .box-title { color: #7bc97b; }
+  .c-net .chip { background: #1f3a1f; color: #9fe09f; border: 1px solid #3a7a3a; }
+
+  /* Backend */
+  .c-back { background: #2a1a1a; border: 1.5px solid #8a3a3a; }
+  .c-back .box-title { color: #ff9090; }
+  .c-back .chip { background: #3a2020; color: #ffb0b0; border: 1px solid #8a3a3a; }
+
+  /* AI */
+  .c-ai { background: #2a1a2a; border: 1.5px solid #7a3a8a; }
+  .c-ai .box-title { color: #d07be0; }
+  .c-ai .chip { background: #3a1f3a; color: #e0a0f0; border: 1px solid #7a3a8a; }
+
+  /* Infra */
+  .c-infra { background: #1a2a2a; border: 1.5px solid #2a7a8a; }
+  .c-infra .box-title { color: #7bcfdf; }
+  .c-infra .chip { background: #1a3a3a; color: #a0e0f0; border: 1px solid #2a7a8a; }
+
+  /* Storage */
+  .c-store { background: #2a2a1a; border: 1.5px solid #8a7a2a; }
+  .c-store .box-title { color: #e0c060; }
+  .c-store .chip { background: #3a3a1a; color: #f0d880; border: 1px solid #8a7a2a; }
+
+  .flex-center { display: flex; justify-content: center; }
+  .gap-20 { gap: 20px; }
+  .mt-4 { margin-top: 4px; }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #333, transparent);
+    margin: 8px 0;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #e53935;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title">QOS — System Architecture</div>
+  <div class="subtitle">72h Refugee Survival App · GDG SWU · 2026</div>
+
+  <!-- FRONTEND -->
+  <div class="row">
+    <div class="layer-label">Frontend</div>
+    <div class="box c-front" style="flex:1">
+      <div class="box-title">Android App (Kotlin + Jetpack Compose)</div>
+      <div class="chips">
+        <span class="chip">HomeScreen</span>
+        <span class="chip">WhatToDoScreen</span>
+        <span class="chip">MapScreen (Mapbox)</span>
+        <span class="chip">TranslationScreen</span>
+        <span class="chip">OCR Scanner (CameraX)</span>
+        <span class="chip">SOS Card</span>
+        <span class="chip">Onboarding</span>
+        <span class="chip">Profile / Settings</span>
+      </div>
+    </div>
+    <div class="box c-store" style="min-width:200px">
+      <div class="box-title">Local Storage</div>
+      <div class="chips">
+        <span class="chip">SharedPreferences</span>
+        <span class="chip">Cache (TTS mp3)</span>
+        <span class="chip">Mapbox Offline Tiles</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARROW -->
+  <div class="arrow-row">
+    <div style="width:28px"></div>
+    <div class="arrow" style="flex:1; align-items:center">
+      <div class="arrow-line"></div>
+      <div class="arrow-head"></div>
+      <div class="arrow-label">HTTPS · REST API · JWT + X-User-Id</div>
+    </div>
+    <div style="min-width:200px"></div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="row">
+    <div class="layer-label">Network</div>
+    <div class="box c-net" style="flex:1">
+      <div class="box-title">API Client (Retrofit + OkHttp)</div>
+      <div class="chips">
+        <span class="chip">Auth Interceptor (JWT)</span>
+        <span class="chip">X-User-Id Interceptor</span>
+        <span class="chip">Token Save Interceptor</span>
+        <span class="chip">30s Timeout</span>
+        <span class="chip">GsonConverter</span>
+      </div>
+    </div>
+    <div style="min-width:200px"></div>
+  </div>
+
+  <!-- ARROW -->
+  <div class="arrow-row">
+    <div style="width:28px"></div>
+    <div class="arrow" style="flex:1; align-items:center">
+      <div class="arrow-line"></div>
+      <div class="arrow-head"></div>
+      <div class="arrow-label">GCP Cloud Run · asia-northeast3</div>
+    </div>
+    <div style="min-width:200px"></div>
+  </div>
+
+  <!-- BACKEND -->
+  <div class="row">
+    <div class="layer-label">Backend</div>
+    <div class="box c-back" style="flex:1">
+      <div class="box-title">Spring Boot (Java 21)</div>
+      <div class="chips">
+        <span class="chip">UserController</span>
+        <span class="chip">MapController</span>
+        <span class="chip">FacilityController</span>
+        <span class="chip">OcrController</span>
+        <span class="chip">TranslationController</span>
+        <span class="chip">StatusController</span>
+        <span class="chip">TtsService</span>
+        <span class="chip">JWT Auth Filter</span>
+      </div>
+    </div>
+    <div style="min-width:200px"></div>
+  </div>
+
+  <!-- ARROW split -->
+  <div class="row" style="margin-top:4px; margin-bottom:4px">
+    <div style="width:28px"></div>
+    <div style="flex:1; display:flex; justify-content:space-around">
+      <div class="arrow" style="align-items:center">
+        <div class="arrow-line"></div>
+        <div class="arrow-head"></div>
+        <div class="arrow-label">Cloud SQL (MySQL)</div>
+      </div>
+      <div class="arrow" style="align-items:center">
+        <div class="arrow-line"></div>
+        <div class="arrow-head"></div>
+        <div class="arrow-label">Google TTS API</div>
+      </div>
+      <div class="arrow" style="align-items:center">
+        <div class="arrow-line"></div>
+        <div class="arrow-head"></div>
+        <div class="arrow-label">AI Server</div>
+      </div>
+    </div>
+    <div style="min-width:200px"></div>
+  </div>
+
+  <!-- INFRA / AI / DB row -->
+  <div class="row">
+    <div class="layer-label">Infra / AI</div>
+    <div style="flex:1; display:flex; gap:16px">
+      <div class="box c-infra" style="flex:1">
+        <div class="box-title">GCP Infrastructure</div>
+        <div class="chips">
+          <span class="chip">Cloud Run</span>
+          <span class="chip">Cloud SQL (MySQL)</span>
+          <span class="chip">Artifact Registry</span>
+          <span class="chip">Secret Manager</span>
+          <span class="chip">Cloud Build CI/CD</span>
+        </div>
+      </div>
+      <div class="box c-ai" style="flex:1">
+        <div class="box-title">AI Services</div>
+        <div class="chips">
+          <span class="chip">Google TTS</span>
+          <span class="chip">ML Kit OCR</span>
+          <span class="chip">Risk Detection</span>
+          <span class="chip">Translation (AI)</span>
+        </div>
+      </div>
+    </div>
+    <div style="min-width:200px"></div>
+  </div>
+
+</div>
+</body>
+</html>
