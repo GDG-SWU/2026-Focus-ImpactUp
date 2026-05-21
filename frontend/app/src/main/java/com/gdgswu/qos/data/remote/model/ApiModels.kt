@@ -203,6 +203,7 @@ data class RecentCardsResponse(
 data class SosCardResponse(
     val user_id: String,
     val generated_at: String,
+    val blood_type: String? = null,
     val translations: Map<String, String>?,
     val conditions_translated: List<TranslatedHealthItem>?,
     val allergies_translated: List<TranslatedHealthItem>?,

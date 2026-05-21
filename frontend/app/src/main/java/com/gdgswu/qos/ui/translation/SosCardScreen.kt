@@ -225,6 +225,16 @@ fun SosCardScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
+
+                    // 혈액형 표시 (번역 불필요 — 국제 표기 동일)
+                    val bt = card.blood_type ?: bloodType
+                    if (bt.isNotBlank() && bt != "Unknown") {
+                        Text("BLOOD TYPE".uppercase(), fontSize = 11.sp, color = TextSecondary,
+                            fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(bt, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = QOSRed)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 } else {
                     // API 실패 시 로컬 데이터 fallback
                     localProfile.forEach { (key, value) ->
