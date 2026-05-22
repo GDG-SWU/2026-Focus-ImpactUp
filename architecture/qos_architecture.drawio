@@ -1,87 +1,72 @@
-<mxfile host="app.diagrams.net" modified="2026-05-21" version="21.6.5">
+<mxfile host="app.diagrams.net">
   <diagram id="qos-arch" name="QOS System Architecture">
-    <mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
+    <mxGraphModel dx="206" dy="133" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1300" pageHeight="900" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- ══════════════ Google Cloud Wrapper ══════════════ -->
-        <mxCell id="gcp" value="&lt;font style=&quot;font-size:14px; font-weight:bold; color:#4285F4;&quot;&gt;☁  Google Cloud&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#4285F4;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=14;spacingTop=10;fontSize=13;arcSize=4;" vertex="1" parent="1">
-          <mxGeometry x="20" y="20" width="590" height="480" as="geometry" />
+        <mxCell id="gcp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=14;spacingTop=10;fontSize=13;arcSize=4;" value="&lt;font style=&quot;font-size:14px; font-weight:bold; color:#4285F4;&quot;&gt;☁  Google Cloud&lt;/font&gt;" vertex="1">
+          <mxGeometry height="480" width="590" x="20" y="20" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Database Box ══════════════ -->
-        <mxCell id="db" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Database&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🐬&lt;/font&gt;  &lt;b&gt;MySQL&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Cloud SQL&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔑&lt;/font&gt;  &lt;b&gt;Secret Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Credentials&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="42" y="72" width="162" height="175" as="geometry" />
+        <mxCell id="db" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Database&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🐬&lt;/font&gt;  &lt;b&gt;MySQL&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Cloud SQL&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔑&lt;/font&gt;  &lt;b&gt;Secret Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Credentials&lt;/font&gt;" vertex="1">
+          <mxGeometry height="175" width="162" x="42" y="72" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ AI/ML Box ══════════════ -->
-        <mxCell id="aiml" value="&lt;b style=&quot;font-size:12px;&quot;&gt;AI / ML&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;📷&lt;/font&gt;  &lt;b&gt;ML Kit OCR&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;On-device Vision&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔊&lt;/font&gt;  &lt;b&gt;Google TTS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;5 languages&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🤖&lt;/font&gt;  &lt;b&gt;Translation AI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Real-time&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="42" y="268" width="162" height="208" as="geometry" />
+        <mxCell id="aiml" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;AI / ML&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;📷&lt;/font&gt;  &lt;b&gt;ML Kit OCR&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;On-device Vision&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔊&lt;/font&gt;  &lt;b&gt;Google TTS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;5 languages&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🤖&lt;/font&gt;  &lt;b&gt;Translation AI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Real-time&lt;/font&gt;" vertex="1">
+          <mxGeometry height="208" width="162" x="42" y="268" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Server Box ══════════════ -->
-        <mxCell id="server" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Server&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🌿&lt;/font&gt;  &lt;b&gt;Spring Boot&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Java 21&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;☁&lt;/font&gt;  &lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;asia-northeast3&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🐳&lt;/font&gt;  &lt;b&gt;Docker&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Artifact Registry&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔁&lt;/font&gt;  &lt;b&gt;Cloud Build&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;CI/CD Auto Deploy&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="232" y="72" width="168" height="408" as="geometry" />
+        <mxCell id="server" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Server&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🌿&lt;/font&gt;  &lt;b&gt;Spring Boot&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Java 21&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;☁&lt;/font&gt;  &lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;asia-northeast3&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🐳&lt;/font&gt;  &lt;b&gt;Docker&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Artifact Registry&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔁&lt;/font&gt;  &lt;b&gt;Cloud Build&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;CI/CD Auto Deploy&lt;/font&gt;" vertex="1">
+          <mxGeometry height="408" width="168" x="232" y="72" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Auth Box ══════════════ -->
-        <mxCell id="auth" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Auth&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔐&lt;/font&gt;  &lt;b&gt;JWT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Bearer Token&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🆔&lt;/font&gt;  &lt;b&gt;X-User-Id&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Request Header&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="638" y="72" width="155" height="155" as="geometry" />
+        <mxCell id="auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Auth&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🔐&lt;/font&gt;  &lt;b&gt;JWT&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Bearer Token&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🆔&lt;/font&gt;  &lt;b&gt;X-User-Id&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Request Header&lt;/font&gt;" vertex="1">
+          <mxGeometry height="155" width="155" x="638" y="72" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Offline Box ══════════════ -->
-        <mxCell id="offline" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Offline&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🗺&lt;/font&gt;  &lt;b&gt;Mapbox Tiles&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Offline Maps&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;💾&lt;/font&gt;  &lt;b&gt;TTS Cache&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;MP3 · SharedPrefs&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="638" y="248" width="155" height="155" as="geometry" />
+        <mxCell id="offline" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=14;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Offline&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;🗺&lt;/font&gt;  &lt;b&gt;Mapbox Tiles&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Offline Maps&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px;&quot;&gt;💾&lt;/font&gt;  &lt;b&gt;TTS Cache&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;MP3 · SharedPrefs&lt;/font&gt;" vertex="1">
+          <mxGeometry height="155" width="155" x="638" y="248" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Client Box ══════════════ -->
-        <mxCell id="client" value="&lt;b style=&quot;font-size:13px;&quot;&gt;Client&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:30px;&quot;&gt;🤖&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:13px;&quot;&gt;Android&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Kotlin&lt;br&gt;Jetpack Compose&lt;br&gt;MVVM&lt;br&gt;Retrofit + OkHttp&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=14;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="828" y="72" width="130" height="250" as="geometry" />
+        <mxCell id="android" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=14;spacingTop=10;fontSize=13;arcSize=4;" value="&lt;b style=&quot;font-size:14px; font-weight:bold; color:#3DDC84;&quot;&gt;🤖  Android Client&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px; color:#555;&quot;&gt;Kotlin · Jetpack Compose · MVVM&lt;/font&gt;" vertex="1">
+          <mxGeometry height="450" width="400" x="820" y="20" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Management Box ══════════════ -->
-        <mxCell id="mgmt" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Management&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;&quot;&gt;🐙  &lt;b&gt;GitHub&lt;/b&gt;&lt;/font&gt;  &amp;nbsp;&amp;nbsp;&amp;nbsp;  &lt;font style=&quot;font-size:12px;&quot;&gt;🔁  &lt;b&gt;Cloud Build CI/CD&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="20" y="524" width="440" height="80" as="geometry" />
+        <mxCell id="ui-layer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=10;" value="&lt;b style=&quot;font-size:11px;&quot;&gt;UI Layer&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px; color:#555;&quot;&gt;Jetpack Compose · 8 Screens&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;&quot;&gt;Home · Map · Translation · SosCard&lt;br&gt;OcrScan · Onboarding · WhatToDo · Setting&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="364" x="838" y="78" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ API Spec Box ══════════════ -->
-        <mxCell id="apispec" value="&lt;b style=&quot;font-size:12px;&quot;&gt;API Spec&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;&quot;&gt;📡  &lt;b&gt;REST API&lt;/b&gt;  (HTTPS · JSON)&lt;/font&gt;  &amp;nbsp;&amp;nbsp;  &lt;font style=&quot;font-size:12px;&quot;&gt;📮  &lt;b&gt;Postman Collection&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=12;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="480" y="524" width="478" height="80" as="geometry" />
+        <mxCell id="lbl-uivm" parent="1" style="text;html=1;align=center;fontSize=9;fillColor=none;strokeColor=none;fontColor=#555555;" value="▼  StateFlow · collectAsState()" vertex="1">
+          <mxGeometry height="20" width="364" x="838" y="172" as="geometry" />
         </mxCell>
-
-        <!-- ══════════════ Arrows ══════════════ -->
-
-        <!-- DB ↔ Server -->
-        <mxCell id="e1" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="db" target="server" parent="1">
+        <mxCell id="vm-layer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=10;" value="&lt;b style=&quot;font-size:11px;&quot;&gt;ViewModel Layer&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px; color:#555;&quot;&gt;AndroidViewModel · viewModelScope · StateFlow&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="364" x="838" y="196" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-vmdata" parent="1" style="text;html=1;align=center;fontSize=9;fillColor=none;strokeColor=none;fontColor=#555555;" value="▼  suspend fun · ApiResult&lt;T&gt;" vertex="1">
+          <mxGeometry height="20" width="364" x="838" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="data-layer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=10;" value="&lt;b style=&quot;font-size:11px;&quot;&gt;Data Layer&lt;/b&gt;&lt;br&gt;&lt;br&gt;📦 &lt;b&gt;QosRepository&lt;/b&gt;&lt;br&gt;🌐 &lt;b&gt;RetrofitClient&lt;/b&gt; + OkHttp&lt;br&gt;🔑 &lt;b&gt;TokenManager&lt;/b&gt;&lt;br&gt;💾 &lt;b&gt;UserProfilePrefs&lt;/b&gt;&lt;br&gt;🔊 &lt;b&gt;TtsPlayer&lt;/b&gt;" vertex="1">
+          <mxGeometry height="150" width="364" x="838" y="284" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="db" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="server" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- AI/ML ↔ Server -->
-        <mxCell id="e2" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="aiml" target="server" parent="1">
+        <mxCell id="e2" edge="1" parent="1" source="aiml" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" target="server" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Server → Auth -->
-        <mxCell id="e3" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="server" target="auth" parent="1">
+        <mxCell id="e3" edge="1" parent="1" source="server" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="auth" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Server → Offline -->
-        <mxCell id="e4" value="" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.6;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="server" target="offline" parent="1">
+        <mxCell id="e4" edge="1" parent="1" source="server" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.6;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="offline" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Auth ↔ Client -->
-        <mxCell id="e5" value="HTTPS · REST API" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;fontSize=10;" edge="1" source="auth" target="client" parent="1">
+        <mxCell id="e5" edge="1" parent="1" source="auth" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;fontSize=10;" target="android" value="HTTPS · REST API">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Offline ↔ Client -->
-        <mxCell id="e6" value="Cache Sync" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.6;entryDx=0;entryDy=0;fontSize=10;" edge="1" source="offline" target="client" parent="1">
+        <mxCell id="e6" edge="1" parent="1" source="offline" style="endArrow=block;startArrow=block;endFill=1;startFill=1;strokeColor=#000000;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.6;entryDx=0;entryDy=0;fontSize=10;" target="android" value="Cache Sync">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
+        <mxCell id="mgmt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Management&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;&quot;&gt;🐙  &lt;b&gt;GitHub&lt;/b&gt;&lt;/font&gt;  &amp;nbsp;&amp;nbsp;&amp;nbsp;  &lt;font style=&quot;font-size:12px;&quot;&gt;🔁  &lt;b&gt;Cloud Build CI/CD&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="440" x="20" y="524" as="geometry" />
+        </mxCell>
+        <mxCell id="apispec" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;align=center;verticalAlign=top;spacingTop=12;fontSize=11;" value="&lt;b style=&quot;font-size:12px;&quot;&gt;API Spec&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;&quot;&gt;📡  &lt;b&gt;REST API&lt;/b&gt;  (HTTPS · JSON)&lt;/font&gt;  &amp;nbsp;&amp;nbsp;  &lt;font style=&quot;font-size:12px;&quot;&gt;📮  &lt;b&gt;Postman Collection&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="478" x="480" y="524" as="geometry" />
+        </mxCell>
+        <mxCell id="LbONccKfEas03VDFxzPz-1" parent="1" style="editableCssRules=.*;html=1;shape=image;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjE2LjQyMDAwMDA3NjI5Mzk0NSIgaGVpZ2h0PSIyMC4wNDk5OTkyMzcwNjA1NDciIGZpbGwtcnVsZT0iZXZlbm9kZCIgdmlld0JveD0iMCAwIDE2LjQyMDAwMDA3NjI5Mzk0NSAyMC4wNDk5OTkyMzcwNjA1NDciPiYjeGE7CTxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+JiN4YTsJLnN0MHtmaWxsOiM0Mjg1ZjQ7fSYjeGE7CS5zdDF7ZmlsbDojNjY5ZGY2O30mI3hhOwk8L3N0eWxlPiYjeGE7CTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04LjIxIDBMMCAzLjQydjUuNjNjMCA1LjA2IDMuNSA5LjggOC4yMSAxMSA0LjcxLTEuMTUgOC4yMS01Ljg5IDguMjEtMTAuOTVWMy40MnptMCAzLjc5YTIuNjMgMi42MyAwIDAgMSAxLjAwNSA1LjA2QTIuNjMgMi42MyAwIDAgMSA2LjM1IDQuNTZhMi42MyAyLjYzIDAgMCAxIDEuODYtLjc3em00LjExIDExLjE1YTguNjQgOC42NCAwIDAgMS00LjExIDIuOTMgOC42NCA4LjY0IDAgMCAxLTQuMTEtMi45M3YtMi4yNWMwLTEuNjcgMi43NC0yLjUyIDQuMTEtMi41MnM0LjExLjg1IDQuMTEgMi41MnoiLz4mI3hhOwk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNOC4yMSAwdjMuNzlhMi42MyAyLjYzIDAgMSAxIDAgNS4yNnYxLjEyYzEuMzcgMCA0LjExLjg1IDQuMTEgMi41MnYyLjI1YTguNjQgOC42NCAwIDAgMS00LjExIDIuOTNWMjBjNC43MS0xLjE1IDguMjEtNS44OSA4LjIxLTEwLjk1VjMuNDJ6Ii8+JiN4YTs8L3N2Zz4=;" value="" vertex="1">
+          <mxGeometry height="19" width="15.2" x="60" y="159" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

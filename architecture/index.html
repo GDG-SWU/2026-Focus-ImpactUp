@@ -7,299 +7,406 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', Arial, sans-serif;
     background: #ffffff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 40px;
-  }
-  .canvas {
-    width: 1100px;
-    background: #ffffff;
-    padding: 40px;
-  }
-  .title {
-    text-align: center;
-    color: #000000;
-    font-size: 26px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-  }
-  .subtitle {
-    text-align: center;
-    color: #444444;
-    font-size: 13px;
-    margin-bottom: 40px;
-  }
-
-  .row {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    gap: 20px;
-    margin-bottom: 16px;
+    min-height: 100vh;
+    padding: 40px;
   }
 
-  /* ── Layer label ── */
-  .layer-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    transform: rotate(180deg);
-    color: #000000;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    align-self: stretch;
-    display: flex;
-    align-items: center;
-    padding: 0 6px;
-    min-width: 28px;
+  .canvas {
+    width: 1000px;
+    background: #fff;
   }
 
-  /* ── Box ── */
-  .box {
-    border-radius: 12px;
-    padding: 14px 18px;
-    position: relative;
-    background: #ffffff;
-    border: 1.5px solid #000000;
-  }
-  .box-title {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    color: #000000;
-  }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-  }
-  .chip {
+  /* ── GCP 외곽 박스 ── */
+  .gcp-wrapper {
+    border: 2px solid #4285F4;
     border-radius: 20px;
-    padding: 5px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    background: #ffffff;
-    color: #000000;
-    border: 1px solid #000000;
+    padding: 28px 28px 28px 28px;
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .gcp-label {
+    position: absolute;
+    top: -14px;
+    left: 20px;
+    background: #fff;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4285F4;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .gcp-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4285F4 25%, #EA4335 25% 50%, #FBBC04 50% 75%, #34A853 75%);
+    flex-shrink: 0;
   }
 
-  /* ── Arrow ── */
-  .arrow-row {
+  /* ── 메인 레이아웃 ── */
+  .main-layout {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    margin: 4px 0;
+    gap: 24px;
+    align-items: flex-start;
   }
-  .arrow {
+
+  /* ── 컴포넌트 박스 ── */
+  .comp-box {
+    border: 1.5px solid #000;
+    border-radius: 14px;
+    padding: 16px 20px;
+    background: #fff;
+  }
+  .comp-box.blue  { border-color: #4285F4; }
+  .comp-box.red   { border-color: #EA4335; }
+  .comp-box.green { border-color: #34A853; }
+  .comp-box.gray  { border-color: #666; }
+
+  .comp-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── 기술 아이템 ── */
+  .tech-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .tech-item:last-child { margin-bottom: 0; }
+
+  .tech-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .tech-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #222;
+    line-height: 1.3;
+  }
+  .tech-sub {
+    font-size: 10px;
+    color: #666;
+  }
+
+  /* ── 컬럼 ── */
+  .col-left   { display: flex; flex-direction: column; gap: 16px; min-width: 170px; }
+  .col-middle { display: flex; flex-direction: column; gap: 16px; min-width: 170px; }
+  .col-arrows { display: flex; flex-direction: column; justify-content: center; gap: 60px; padding: 20px 0; }
+  .col-right  { display: flex; flex-direction: column; justify-content: center; }
+
+  /* ── 화살표 ── */
+  .arrow-h {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .arrow-line-h {
+    height: 1.5px;
+    background: #333;
+    flex: 1;
+  }
+  .arrow-head-r::after {
+    content: '';
+    display: inline-block;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid #333;
+  }
+  .arrow-head-l::before {
+    content: '';
+    display: inline-block;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 7px solid #333;
+  }
+  .arrow-bi {
+    display: flex;
+    align-items: center;
+  }
+  .arrow-bi .arrow-line-h { background: #333; }
+
+  /* ── 하단 박스들 ── */
+  .bottom-row {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  /* ── Client 박스 (크게) ── */
+  .client-box {
+    border: 1.5px solid #000;
+    border-radius: 14px;
+    padding: 20px 24px;
+    background: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    justify-content: center;
+    gap: 8px;
+    min-width: 130px;
   }
-  .arrow-line {
-    width: 2px;
-    height: 22px;
-    background: #000000;
+  .client-icon {
+    font-size: 42px;
   }
-  .arrow-head {
-    width: 0;
-    height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 8px solid #000000;
-  }
-  .arrow-label {
-    font-size: 10px;
-    color: #000000;
-    margin-top: 2px;
-  }
-
-  /* ── Colors (모두 흰 배경 + 검은 stroke) ── */
-  .c-front, .c-net, .c-back, .c-ai, .c-infra, .c-store {
-    background: #ffffff;
-    border: 1.5px solid #000000;
-  }
-  .c-front .box-title, .c-net .box-title, .c-back .box-title,
-  .c-ai .box-title, .c-infra .box-title, .c-store .box-title {
-    color: #000000;
-  }
-  .c-front .chip, .c-net .chip, .c-back .chip,
-  .c-ai .chip, .c-infra .chip, .c-store .chip {
-    background: #ffffff;
-    color: #000000;
-    border: 1px solid #000000;
-  }
-
-  .flex-center { display: flex; justify-content: center; }
-  .gap-20 { gap: 20px; }
-  .mt-4 { margin-top: 4px; }
-
-  .divider {
-    width: 100%;
-    height: 1px;
-    background: #000000;
-    margin: 8px 0;
-  }
-
-  .badge {
-    display: inline-block;
-    background: #000000;
-    color: #ffffff;
-    font-size: 10px;
+  .client-title {
+    font-size: 13px;
     font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-left: 6px;
-    vertical-align: middle;
+    color: #222;
+    text-align: center;
+  }
+  .client-sub {
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+  }
+
+  /* 아이콘 색상들 */
+  .ic-spring  { background: #6DB33F22; color: #6DB33F; }
+  .ic-mysql   { background: #00758F22; color: #00758F; }
+  .ic-cloud   { background: #4285F422; color: #4285F4; }
+  .ic-jwt     { background: #F5A62322; color: #d48a10; }
+  .ic-mlkit   { background: #EA433522; color: #EA4335; }
+  .ic-tts     { background: #34A85322; color: #34A853; }
+  .ic-ai      { background: #9C27B022; color: #9C27B0; }
+  .ic-android { background: #3DDC8422; color: #3DDC84; }
+  .ic-ci      { background: #23292f22; color: #23292f; }
+  .ic-map     { background: #FF6B3522; color: #FF6B35; }
+
+  .section-outer {
+    display: flex;
+    align-items: center;
+    gap: 0;
   }
 </style>
 </head>
 <body>
 <div class="canvas">
-  <div class="title">QOS — System Architecture</div>
-  <div class="subtitle">72h Refugee Survival App · GDG SWU · 2026</div>
 
-  <!-- FRONTEND -->
-  <div class="row">
-    <div class="layer-label">Frontend</div>
-    <div class="box c-front" style="flex:1">
-      <div class="box-title">Android App (Kotlin + Jetpack Compose)</div>
-      <div class="chips">
-        <span class="chip">HomeScreen</span>
-        <span class="chip">WhatToDoScreen</span>
-        <span class="chip">MapScreen (Mapbox)</span>
-        <span class="chip">TranslationScreen</span>
-        <span class="chip">OCR Scanner (CameraX)</span>
-        <span class="chip">SOS Card</span>
-        <span class="chip">Onboarding</span>
-        <span class="chip">Profile / Settings</span>
+  <!-- ── GCP 영역 ── -->
+  <div style="display:flex; gap:24px; align-items:flex-start;">
+
+    <!-- GCP 박스 -->
+    <div class="gcp-wrapper" style="flex:1">
+      <div class="gcp-label">
+        <div class="gcp-dot"></div>
+        Google Cloud
+      </div>
+
+      <div class="main-layout">
+
+        <!-- 왼쪽: DB -->
+        <div class="col-left">
+          <div class="comp-box blue">
+            <div class="comp-title">Database</div>
+            <div class="tech-item">
+              <div class="tech-icon ic-mysql">🐬</div>
+              <div>
+                <div class="tech-name">MySQL</div>
+                <div class="tech-sub">Cloud SQL</div>
+              </div>
+            </div>
+            <div class="tech-item">
+              <div class="tech-icon ic-cloud">🗄️</div>
+              <div>
+                <div class="tech-name">Secret Manager</div>
+                <div class="tech-sub">Credentials</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="comp-box green">
+            <div class="comp-title">AI / ML</div>
+            <div class="tech-item">
+              <div class="tech-icon ic-mlkit">📷</div>
+              <div>
+                <div class="tech-name">ML Kit OCR</div>
+                <div class="tech-sub">On-device</div>
+              </div>
+            </div>
+            <div class="tech-item">
+              <div class="tech-icon ic-tts">🔊</div>
+              <div>
+                <div class="tech-name">Google TTS</div>
+                <div class="tech-sub">5 languages</div>
+              </div>
+            </div>
+            <div class="tech-item">
+              <div class="tech-icon ic-ai">🤖</div>
+              <div>
+                <div class="tech-name">Translation AI</div>
+                <div class="tech-sub">Real-time</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 화살표 (DB ↔ Server) -->
+        <div style="display:flex; flex-direction:column; justify-content:center; padding: 10px 0; gap:0">
+          <div style="display:flex; align-items:center; height:100%">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div style="font-size:20px; color:#333">⇄</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 가운데: Server -->
+        <div style="display:flex; flex-direction:column; gap:10px; min-width:160px;">
+          <div class="comp-box red" style="flex:1">
+            <div class="comp-title">Server</div>
+            <div class="tech-item">
+              <div class="tech-icon ic-spring">🌿</div>
+              <div>
+                <div class="tech-name">Spring Boot</div>
+                <div class="tech-sub">Java 21</div>
+              </div>
+            </div>
+            <div class="tech-item">
+              <div class="tech-icon ic-cloud">☁️</div>
+              <div>
+                <div class="tech-name">Cloud Run</div>
+                <div class="tech-sub">asia-northeast3</div>
+              </div>
+            </div>
+            <div class="tech-item">
+              <div class="tech-icon ic-ci">🐳</div>
+              <div>
+                <div class="tech-name">Docker</div>
+                <div class="tech-sub">Artifact Registry</div>
+              </div>
+            </div>
+            <div class="tech-item">
+              <div class="tech-icon ic-ci">🔁</div>
+              <div>
+                <div class="tech-name">Cloud Build</div>
+                <div class="tech-sub">CI/CD</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-    <div class="box c-store" style="min-width:200px">
-      <div class="box-title">Local Storage</div>
-      <div class="chips">
-        <span class="chip">SharedPreferences</span>
-        <span class="chip">Cache (TTS mp3)</span>
-        <span class="chip">Mapbox Offline Tiles</span>
-      </div>
-    </div>
-  </div>
 
-  <!-- ARROW -->
-  <div class="arrow-row">
-    <div style="width:28px"></div>
-    <div class="arrow" style="flex:1; align-items:center">
-      <div class="arrow-line"></div>
-      <div class="arrow-head"></div>
-      <div class="arrow-label">HTTPS · REST API · JWT + X-User-Id</div>
-    </div>
-    <div style="min-width:200px"></div>
-  </div>
+    <!-- 화살표 (Server → Auth → Client) -->
+    <div style="display:flex; flex-direction:column; justify-content:flex-start; gap:16px; padding-top:40px; min-width:150px;">
 
-  <!-- NETWORK -->
-  <div class="row">
-    <div class="layer-label">Network</div>
-    <div class="box c-net" style="flex:1">
-      <div class="box-title">API Client (Retrofit + OkHttp)</div>
-      <div class="chips">
-        <span class="chip">Auth Interceptor (JWT)</span>
-        <span class="chip">X-User-Id Interceptor</span>
-        <span class="chip">Token Save Interceptor</span>
-        <span class="chip">30s Timeout</span>
-        <span class="chip">GsonConverter</span>
-      </div>
-    </div>
-    <div style="min-width:200px"></div>
-  </div>
-
-  <!-- ARROW -->
-  <div class="arrow-row">
-    <div style="width:28px"></div>
-    <div class="arrow" style="flex:1; align-items:center">
-      <div class="arrow-line"></div>
-      <div class="arrow-head"></div>
-      <div class="arrow-label">GCP Cloud Run · asia-northeast3</div>
-    </div>
-    <div style="min-width:200px"></div>
-  </div>
-
-  <!-- BACKEND -->
-  <div class="row">
-    <div class="layer-label">Backend</div>
-    <div class="box c-back" style="flex:1">
-      <div class="box-title">Spring Boot (Java 21)</div>
-      <div class="chips">
-        <span class="chip">UserController</span>
-        <span class="chip">MapController</span>
-        <span class="chip">FacilityController</span>
-        <span class="chip">OcrController</span>
-        <span class="chip">TranslationController</span>
-        <span class="chip">StatusController</span>
-        <span class="chip">TtsService</span>
-        <span class="chip">JWT Auth Filter</span>
-      </div>
-    </div>
-    <div style="min-width:200px"></div>
-  </div>
-
-  <!-- ARROW split -->
-  <div class="row" style="margin-top:4px; margin-bottom:4px">
-    <div style="width:28px"></div>
-    <div style="flex:1; display:flex; justify-content:space-around">
-      <div class="arrow" style="align-items:center">
-        <div class="arrow-line"></div>
-        <div class="arrow-head"></div>
-        <div class="arrow-label">Cloud SQL (MySQL)</div>
-      </div>
-      <div class="arrow" style="align-items:center">
-        <div class="arrow-line"></div>
-        <div class="arrow-head"></div>
-        <div class="arrow-label">Google TTS API</div>
-      </div>
-      <div class="arrow" style="align-items:center">
-        <div class="arrow-line"></div>
-        <div class="arrow-head"></div>
-        <div class="arrow-label">AI Server</div>
-      </div>
-    </div>
-    <div style="min-width:200px"></div>
-  </div>
-
-  <!-- INFRA / AI / DB row -->
-  <div class="row">
-    <div class="layer-label">Infra / AI</div>
-    <div style="flex:1; display:flex; gap:16px">
-      <div class="box c-infra" style="flex:1">
-        <div class="box-title">GCP Infrastructure</div>
-        <div class="chips">
-          <span class="chip">Cloud Run</span>
-          <span class="chip">Cloud SQL (MySQL)</span>
-          <span class="chip">Artifact Registry</span>
-          <span class="chip">Secret Manager</span>
-          <span class="chip">Cloud Build CI/CD</span>
+      <!-- Auth 박스 -->
+      <div class="comp-box gray">
+        <div class="comp-title">Auth</div>
+        <div class="tech-item">
+          <div class="tech-icon ic-jwt">🔐</div>
+          <div>
+            <div class="tech-name">JWT</div>
+            <div class="tech-sub">Bearer Token</div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon ic-cloud" style="font-size:12px">ID</div>
+          <div>
+            <div class="tech-name">X-User-Id</div>
+            <div class="tech-sub">Header</div>
+          </div>
         </div>
       </div>
-      <div class="box c-ai" style="flex:1">
-        <div class="box-title">AI Services</div>
-        <div class="chips">
-          <span class="chip">Google TTS</span>
-          <span class="chip">ML Kit OCR</span>
-          <span class="chip">Risk Detection</span>
-          <span class="chip">Translation (AI)</span>
+
+      <!-- Offline 박스 -->
+      <div class="comp-box gray">
+        <div class="comp-title">Offline</div>
+        <div class="tech-item">
+          <div class="tech-icon ic-map">🗺️</div>
+          <div>
+            <div class="tech-name">Mapbox Tiles</div>
+            <div class="tech-sub">Local cache</div>
+          </div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon ic-tts" style="font-size:12px">MP3</div>
+          <div>
+            <div class="tech-name">TTS Cache</div>
+            <div class="tech-sub">SharedPrefs</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 화살표 -->
+    <div style="display:flex; flex-direction:column; justify-content:center; padding-top:20px; font-size:22px; color:#333; gap:50px;">
+      <div>⇄</div>
+      <div>⇄</div>
+    </div>
+
+    <!-- Client -->
+    <div class="client-box" style="margin-top:30px">
+      <div class="client-title">Client</div>
+      <div class="client-icon">🤖</div>
+      <div class="tech-name" style="text-align:center">Android</div>
+      <div class="tech-sub">Kotlin<br>Jetpack Compose</div>
+      <div style="margin-top:8px; font-size:10px; color:#666; text-align:center">Retrofit + OkHttp<br>MVVM</div>
+    </div>
+
+  </div>
+
+  <!-- ── 하단 박스들 ── -->
+  <div class="bottom-row">
+    <div class="comp-box gray" style="flex:1">
+      <div class="comp-title">Management</div>
+      <div style="display:flex; gap:20px; align-items:center; justify-content:center; padding:4px 0;">
+        <div class="tech-item" style="margin:0">
+          <div class="tech-icon ic-ci">🐙</div>
+          <div>
+            <div class="tech-name">GitHub</div>
+            <div class="tech-sub">dev-temp branch</div>
+          </div>
+        </div>
+        <div class="tech-item" style="margin:0">
+          <div class="tech-icon ic-ci">🔁</div>
+          <div>
+            <div class="tech-name">Cloud Build</div>
+            <div class="tech-sub">Auto deploy</div>
+          </div>
         </div>
       </div>
     </div>
-    <div style="min-width:200px"></div>
+
+    <div class="comp-box gray" style="flex:1">
+      <div class="comp-title">API Spec</div>
+      <div style="display:flex; gap:20px; align-items:center; justify-content:center; padding:4px 0;">
+        <div class="tech-item" style="margin:0">
+          <div class="tech-icon ic-cloud" style="font-size:11px; font-weight:700">REST</div>
+          <div>
+            <div class="tech-name">REST API</div>
+            <div class="tech-sub">HTTPS · JSON</div>
+          </div>
+        </div>
+        <div class="tech-item" style="margin:0">
+          <div class="tech-icon ic-jwt" style="font-size:11px">📮</div>
+          <div>
+            <div class="tech-name">Postman</div>
+            <div class="tech-sub">Collection v2.1</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
