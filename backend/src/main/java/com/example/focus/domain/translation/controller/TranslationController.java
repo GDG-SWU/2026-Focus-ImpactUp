@@ -33,21 +33,76 @@ public class TranslationController {
     @GetMapping("/cards/phrasebook")
     public ResponseEntity<Map<String, Object>> getPhrasebook(@RequestParam(required = false) String category) {
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("category", category != null ? category : "all");
+        
+        // 프론트엔드가 보낸 카테고리 판별 (없으면 "all")
+        String currentCategory = category != null ? category : "all";
+        response.put("category", currentCategory);
 
         List<Map<String, Object>> cards = new ArrayList<>();
-        Map<String, Object> card1 = new LinkedHashMap<>();
-        card1.put("id", "card_medical_001");
-        card1.put("situation", "나는 당뇨병이 있습니다");
 
-        Map<String, String> translations = new HashMap<>();
-        translations.put("ar", "أنا مريض بالسكري");
-        translations.put("fr", "Je suis diabétique");
-        translations.put("wo", "Dafa am sukar");
-        card1.put("translations", translations);
-        card1.put("tts_available", true);
-        card1.put("usage_count", 0);
-        cards.add(card1);
+        // 1. 의료(medical) 관련 카드 분기
+        if (currentCategory.equals("all") || currentCategory.equals("medical")) {
+            Map<String, Object> cardMedical1 = new LinkedHashMap<>();
+            cardMedical1.put("id", "card_medical_001");
+            cardMedical1.put("situation", "나는 당뇨병이 있습니다");
+            Map<String, String> trans1 = new HashMap<>();
+            trans1.put("ar", "أنا مريض بالسكري");
+            trans1.put("fr", "Je suis diabétique");
+            trans1.put("wo", "Dafa am sukar");
+            cardMedical1.put("translations", trans1);
+            cardMedical1.put("tts_available", true);
+            cardMedical1.put("usage_count", 0);
+            cards.add(cardMedical1);
+
+            Map<String, Object> cardMedical2 = new LinkedHashMap<>();
+            cardMedical2.put("id", "card_medical_002");
+            cardMedical2.put("situation", "의사가 필요합니다. 도와주세요.");
+            Map<String, String> trans2 = new HashMap<>();
+            trans2.put("ar", "أحتاج إلى طبيب. ساعدني");
+            trans2.put("fr", "J'ai besoin d'un médecin. S'il vous plaît, aidez-moi.");
+            trans2.put("wo", "Dama soxla dotoor. Dimbali ma");
+            cardMedical2.put("translations", trans2);
+            cardMedical2.put("tts_available", true);
+            cardMedical2.put("usage_count", 0);
+            cards.add(cardMedical2);
+        }
+
+        // 2. 쉼터/대피소(shelter) 관련 카드 분기
+        if (currentCategory.equals("all") || currentCategory.equals("shelter")) {
+            Map<String, Object> cardShelter = new LinkedHashMap<>();
+            cardShelter.put("id", "card_shelter_001");
+            cardShelter.put("situation", "가장 가까운 대피소나 쉼터는 어디에 있습니까?");
+            Map<String, String> transShelter = new HashMap<>();
+            transShelter.put("ar", "أين أقرب ملجأ؟");
+            transShelter.put("fr", "Où se trouve le refuge le plus proche?");
+            transShelter.put("wo", "Ana bërëb u taax mi gën jége?");
+            cardShelter.put("translations", transShelter);
+            cardShelter.put("tts_available", true);
+            cardShelter.put("usage_count", 0);
+            cards.add(cardShelter);
+        }
+
+        // 3. 음식/식수(food/water) 관련 카드 분기
+        if (currentCategory.equals("all") || currentCategory.equals("food") || currentCategory.equals("water")) {
+            Map<String, Object> cardFood = new LinkedHashMap<>();
+            cardFood.put("id", "card_food_001");
+            cardFood.put("situation", "식수와 음식을 받을 수 있는 곳이 어디인가요?");
+            Map<String, String> transFood = new HashMap<>();
+            transFood.put("ar", "أين يمكنني الحصول على الماء والطعام؟");
+            transFood.put("fr", "Où puis-je obtenir de l'eau et de la nourriture?");
+            transFood.put("wo", "Ana bërëb bu may jote ndox ak ñam?");
+            cardFood.put("translations", transFood);
+            cardFood.put("tts_available", true);
+            cardFood.put("usage_count", 0);
+            cards.add(cardFood);
+        }
+
+        /* * [참고: 추후 실제 DB 데이터 완전 자동 연동 시]
+         * 현재 프로젝트에 등록되어 있는 MedicalTerm 엔티티 및 레포지토리를 활용해 
+         * 데이터를 동적으로 긁어오고 싶다면 아래 형태로 코드를 확장할 수 있습니다.
+         * * List<MedicalTerm> terms = medicalTermRepository.findByCategory(currentCategory);
+         * // 이후 반복문을 돌며 프론트엔드가 요구하는 JSON 구조(Map)로 빌드하여 cards.add() 수행
+         */
 
         response.put("cards", cards);
         response.put("offline", false);
