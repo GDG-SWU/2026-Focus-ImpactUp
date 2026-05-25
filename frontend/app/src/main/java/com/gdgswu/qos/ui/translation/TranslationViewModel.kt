@@ -75,8 +75,8 @@ fun PhraseCard.toPhrase(startId: Int): Phrase? {
         french   = translations["fr"] ?: situation,
         arabic   = translations["ar"] ?: situation,
         wolof    = translations["wo"] ?: situation,
-        mandinka = translations["mnk"] ?: situation,
-        fula     = translations["ff"] ?: situation
+        mandinka = translations["ma"] ?: situation,
+        fula     = translations["fu"] ?: situation
     )
 }
 
