@@ -225,7 +225,7 @@ public class TranslationController {
             return new ResponseEntity<>(audioBytes, headers, HttpStatus.OK);
 
         } catch (Exception e) {
-            // 503
+            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.SERVICE_UNAVAILABLE);
         }
     }

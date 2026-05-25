@@ -33,13 +33,13 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
 
-      # 파이어베이스 키 파일 가상 경로 설정
+      # 파이어베이스와 구글 TTS 라이브러리 키 파일 가상 경로 설정
       - '--set-env-vars'
-      - 'FIREBASE_CREDENTIALS_PATH=/secrets/firebase-key.json'
+      - 'FIREBASE_CREDENTIALS_PATH=/secrets/firebase-key.json,GOOGLE_APPLICATION_CREDENTIALS=/secrets/firebase-key.json'
 
       # 모든 금고 연결
       - '--set-secrets'
-      - 'DB_HOST=DB_HOST:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,FIREBASE_BUCKET_NAME=FIREBASE_BUCKET_NAME:latest,/secrets/firebase-key.json=focus-firebase-json:latest'
+      - 'DB_HOST=DB_HOST:latest,DB_PORT=DB_PORT:latest,DB_NAME=DB_NAME:latest,DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,FIREBASE_BUCKET_NAME=FIREBASE_BUCKET_NAME:latest,/secrets/firebase-key.json=focus-firebase-json:latest,SMARTCAT_API_KEY=SMARTCAT_API_KEY:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
