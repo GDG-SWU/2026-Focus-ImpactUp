@@ -29,8 +29,8 @@ public class OcrServiceImpl implements OcrService {
         String upperOcrText = request.getOcrText().toUpperCase();
         List<MatchedRiskDto> matchedRisks = new ArrayList<>();
 
-        User user = userRepository.findById(request.getUserId().toString())
-                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+            User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다. ID: " + request.getUserId()));
 
         HealthProfile healthProfile = user.getHealthProfile();
 
