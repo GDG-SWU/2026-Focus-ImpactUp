@@ -59,18 +59,26 @@ class OcrViewModel : ViewModel() {
         })
     }
 
-    // ImageCapture는 JPEG 포맷으로 반환 → planes[0] 버퍼가 곧 JPEG 바이트
+    // ImageCapture는 JPEG 포맷으로 반환 + 회전 보정 (CameraX 센서 방향 → 실제 표시 방향)
     private fun extractJpegBytes(image: ImageProxy): ByteArray {
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        return compressImage(bytes)
+        val rotation = image.imageInfo.rotationDegrees
+        return compressImage(bytes, rotation)
     }
 
-    // 이미지를 최대 1024px, JPEG 80% 품질로 압축 (OCR에 충분한 해상도 유지)
-    private fun compressImage(bytes: ByteArray): ByteArray {
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
-        val maxSize = 1024
+    // 이미지를 최대 1280px, JPEG 90% 품질로 압축 + 회전 보정 (Vision API 인식률 향상)
+    private fun compressImage(bytes: ByteArray, rotationDegrees: Int = 0): ByteArray {
+        var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
+
+        // CameraX 센서 회전 보정 (0/90/180/270도)
+        if (rotationDegrees != 0) {
+            val matrix = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }
+
+        val maxSize = 1280
         val scale = minOf(maxSize.toFloat() / bitmap.width, maxSize.toFloat() / bitmap.height, 1f)
         val scaled = if (scale < 1f) {
             Bitmap.createScaledBitmap(
@@ -81,7 +89,7 @@ class OcrViewModel : ViewModel() {
             )
         } else bitmap
         val out = java.io.ByteArrayOutputStream()
-        scaled.compress(Bitmap.CompressFormat.JPEG, 80, out)
+        scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
         return out.toByteArray()
     }
 
