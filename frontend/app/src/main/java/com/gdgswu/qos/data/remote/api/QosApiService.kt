@@ -115,6 +115,14 @@ interface QosApiService {
     @GET("cards/sos")
     suspend fun getSosCard(): Response<SosCardResponse>
 
+    // ── translate ──────────────────────────────────────────────────────────────
+
+    /** 텍스트 번역 (영어 → 대상 언어) */
+    @POST("translate")
+    suspend fun translate(
+        @Body request: TranslateRequest
+    ): Response<TranslateResponse>
+
     // ── tts ────────────────────────────────────────────────────────────────────
 
     /** 번역 텍스트 TTS 오디오 (audio/mpeg 바이너리 직접 반환) */

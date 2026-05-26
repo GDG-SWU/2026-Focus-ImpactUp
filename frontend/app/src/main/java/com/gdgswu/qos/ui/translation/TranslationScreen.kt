@@ -48,8 +48,11 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
     var selectedLanguage by remember { mutableStateOf(SupportedLanguage.FRENCH) }
     var selectedCategory by remember { mutableStateOf<PhraseCategory?>(null) }
     var inputText by remember { mutableStateOf("") }
-    var translatedResult by remember { mutableStateOf<String?>(null) }
     var isCustomSaved by remember { mutableStateOf(false) }
+
+    // 번역 상태 (ViewModel)
+    val translatedResult by vm.translatedText.collectAsState()
+    val isTranslating by vm.isTranslating.collectAsState()
 
     // API 카드 (있으면 samplePhrases 대체)
     val apiPhrases by vm.apiPhrases.collectAsState()
@@ -66,7 +69,7 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
 
     fun resetAll() {
         inputText = ""
-        translatedResult = null
+        vm.clearTranslation()
         isCustomSaved = false
         selectedCategory = null
         vm.loadPhrasebook()
@@ -90,12 +93,12 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
 
     // 언어가 바뀌면 번역 결과 초기화
     LaunchedEffect(selectedLanguage) {
-        translatedResult = null
+        vm.clearTranslation()
         isCustomSaved = false
     }
     // 입력 텍스트가 바뀌면 이전 번역 결과 초기화
     LaunchedEffect(inputText) {
-        translatedResult = null
+        vm.clearTranslation()
         isCustomSaved = false
     }
 
@@ -130,9 +133,10 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
             item {
                 Button(
                     onClick = {
-                        translatedResult = "[${selectedLanguage.displayName}] $inputText"
                         isCustomSaved = false
+                        vm.translate(inputText, selectedLanguage)
                     },
+                    enabled = !isTranslating,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -140,9 +144,19 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
                     colors = ButtonDefaults.buttonColors(containerColor = QOSCyan),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Translate, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Translate", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    if (isTranslating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Translating...", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    } else {
+                        Icon(Icons.Filled.Translate, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Translate", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
                 }
             }
         }

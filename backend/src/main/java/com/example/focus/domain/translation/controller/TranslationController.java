@@ -1,5 +1,6 @@
 package com.example.focus.domain.translation.controller;
 
+import com.example.focus.domain.translation.service.TranslateService;
 import com.example.focus.domain.translation.service.TtsService;
 import com.example.focus.domain.user.entity.User;
 import com.example.focus.domain.user.repository.UserRepository;
@@ -20,11 +21,14 @@ import com.example.focus.domain.translation.repository.MedicalTermRepository;
 public class TranslationController {
 
     private final TtsService ttsService;
+    private final TranslateService translateService;
     private final UserRepository userRepository;
     private final MedicalTermRepository medicalTermRepository;
 
-    public TranslationController(TtsService ttsService, UserRepository userRepository, MedicalTermRepository medicalTermRepository) {
+    public TranslationController(TtsService ttsService, TranslateService translateService,
+                                  UserRepository userRepository, MedicalTermRepository medicalTermRepository) {
         this.ttsService = ttsService;
+        this.translateService = translateService;
         this.userRepository = userRepository;
         this.medicalTermRepository = medicalTermRepository;
     }
@@ -209,6 +213,35 @@ public class TranslationController {
         response.put("offline", false);
 
         return ResponseEntity.ok().body(response);
+    }
+
+    // 텍스트 번역
+    @PostMapping("/translate")
+    public ResponseEntity<Map<String, Object>> translateText(@RequestBody Map<String, String> request) {
+        String text = request.get("text");
+        String targetLanguage = request.get("target_language");
+
+        if (text == null || targetLanguage == null || text.trim().isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        String translated = translateService.translateFromEnglish(text.trim(), targetLanguage);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("original_text", text.trim());
+        response.put("target_language", targetLanguage);
+
+        if (translated != null) {
+            response.put("translated_text", translated);
+            response.put("success", true);
+        } else {
+            // 미지원 언어이거나 API 오류 → 원문 반환
+            response.put("translated_text", text.trim());
+            response.put("success", false);
+            response.put("message", "Translation not available for this language");
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     // 번역 카드 TTS 재생

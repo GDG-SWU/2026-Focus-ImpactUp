@@ -7,6 +7,7 @@ import com.example.focus.domain.user.entity.HealthProfile;
 import com.example.focus.domain.ocr.repository.OcrDangerLexiconRepository;
 import com.example.focus.domain.user.repository.UserRepository;
 import com.example.focus.domain.ocr.service.OcrService;
+import com.example.focus.domain.translation.service.TranslateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.cloud.vision.v1.*;
 import com.google.protobuf.ByteString;
 import org.springframework.web.reactive.function.client.WebClient;
-import com.google.cloud.translate.Translate;
-import com.google.cloud.translate.TranslateOptions;
-import com.google.cloud.translate.Translation;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +27,7 @@ public class OcrServiceImpl implements OcrService {
 
     private final OcrDangerLexiconRepository ocrDangerLexiconRepository;
     private final UserRepository userRepository;
+    private final TranslateService translateService;
     private final WebClient.Builder webClientBuilder;
 
     @Override
@@ -87,10 +86,17 @@ public class OcrServiceImpl implements OcrService {
         }
 
         if (extractedRawText.isBlank()) {
-            extractedRawText = "인식된 텍스트가 없습니다. 사진을 더 선명하게 찍어주세요.";
+            extractedRawText = "";
         }
 
+        // 실제 번역 수행 (소스 언어 자동 감지 → targetLanguage)
         String translatedText = extractedRawText;
+        if (!extractedRawText.isBlank() && targetLanguage != null && !targetLanguage.isBlank()) {
+            String translated = translateService.translateText(extractedRawText, targetLanguage, null);
+            if (translated != null) {
+                translatedText = translated;
+            }
+        }
 
         List<HighlightedKeywordDto> dynamicKeywords = new ArrayList<>();
         String upperRawText = extractedRawText.toUpperCase();

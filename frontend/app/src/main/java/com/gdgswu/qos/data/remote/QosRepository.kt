@@ -294,6 +294,21 @@ class QosRepository(private val context: Context) {
         }
     }
 
+    suspend fun translate(text: String, targetLanguage: String): ApiResult<TranslateResponse> {
+        return try {
+            val response = api.translate(TranslateRequest(text = text, target_language = targetLanguage))
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) ApiResult.Success(body)
+                else ApiResult.Error("Empty response body")
+            } else {
+                ApiResult.Error("Error ${response.code()}: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Unknown error")
+        }
+    }
+
     suspend fun getRecentCards(): ApiResult<RecentCardsResponse> {
         return try {
             val response = api.getRecentCards()

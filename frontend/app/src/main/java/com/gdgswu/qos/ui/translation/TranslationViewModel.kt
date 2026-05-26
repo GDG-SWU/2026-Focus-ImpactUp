@@ -30,6 +30,14 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    /** 번역 결과 */
+    private val _translatedText = MutableStateFlow<String?>(null)
+    val translatedText: StateFlow<String?> = _translatedText
+
+    /** 번역 중 여부 */
+    private val _isTranslating = MutableStateFlow(false)
+    val isTranslating: StateFlow<Boolean> = _isTranslating
+
     init {
         loadPhrasebook()
         loadRecentCards()
@@ -46,6 +54,25 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
             }
             _isLoading.value = false
         }
+    }
+
+    fun translate(text: String, language: SupportedLanguage) {
+        viewModelScope.launch {
+            _isTranslating.value = true
+            _translatedText.value = null
+            val result = withTimeoutOrNull(10_000L) {
+                repository.translate(text, language.code)
+            }
+            _translatedText.value = when (result) {
+                is ApiResult.Success -> result.data.translated_text
+                else -> null
+            }
+            _isTranslating.value = false
+        }
+    }
+
+    fun clearTranslation() {
+        _translatedText.value = null
     }
 
     fun loadRecentCards() {

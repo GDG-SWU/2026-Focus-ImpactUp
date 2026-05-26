@@ -277,3 +277,20 @@ data class MatchedRisk(
     val matched_value: String,
     val warning_message: String
 )
+
+// ══════════════════════════════════════════════════════════════════════════════
+// translate
+// ══════════════════════════════════════════════════════════════════════════════
+
+data class TranslateRequest(
+    val text: String,
+    val target_language: String
+)
+
+data class TranslateResponse(
+    val original_text: String,
+    val translated_text: String,
+    val target_language: String,
+    val success: Boolean,
+    val message: String? = null
+)
