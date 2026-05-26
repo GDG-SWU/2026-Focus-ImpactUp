@@ -39,6 +39,7 @@ public class OcrServiceImpl implements OcrService {
         }
 
         String extractedRawText = "";
+        boolean ocrServiceAvailable = false;
 
         try {
             // Cloud Run에서 Application Default Credentials 자동 사용 (quotaProjectId 제거)
@@ -59,10 +60,11 @@ public class OcrServiceImpl implements OcrService {
                 BatchAnnotateImagesResponse response = visionClient.batchAnnotateImages(List.of(request));
                 List<AnnotateImageResponse> responses = response.getResponsesList();
 
+                ocrServiceAvailable = true; // API 호출 자체는 성공
                 for (AnnotateImageResponse res : responses) {
                     if (res.hasError()) {
                         System.out.printf("구글 비전 내부 에러: %s%n", res.getError().getMessage());
-                        // 에러가 있어도 빈 텍스트로 graceful 처리 (500 대신 빈 결과 반환)
+                        ocrServiceAvailable = false;
                         break;
                     }
 
@@ -114,7 +116,7 @@ public class OcrServiceImpl implements OcrService {
                 translatedText,
                 dynamicKeywords,
                 "참고용으로만 사용하세요. 의료 판단에 사용하지 마세요.",
-                true
+                !ocrServiceAvailable
         );
     }
 

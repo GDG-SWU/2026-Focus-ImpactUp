@@ -99,7 +99,11 @@ class OcrViewModel : ViewModel() {
         when (ocrResult) {
             is ApiResult.Success -> {
                 if (ocrResult.data.raw_text.isNullOrBlank()) {
-                    _uiState.value = OcrUiState.ScanError("No text detected — adjust the frame and try again")
+                    val msg = if (ocrResult.data.offline)
+                        "Scanner service unavailable — try again later"
+                    else
+                        "No text detected — adjust the frame and try again"
+                    _uiState.value = OcrUiState.ScanError(msg)
                     return
                 }
                 val userId = TokenManager.getUserId(context) ?: "unknown"
