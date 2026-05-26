@@ -47,6 +47,7 @@ class TtsPlayer(private val context: Context) {
                     langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
                     engine.setLanguage(Locale.ENGLISH)
                 }
+                engine.setSpeechRate(0.85f)  // 자연스러운 속도 (기본값 1.0보다 살짝 느리게)
 
                 engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}

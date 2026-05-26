@@ -79,9 +79,8 @@ public class TranslateService {
 
         try {
             // langpair의 | 기호는 URL 인코딩하지 않음 (MyMemory 요구사항)
-            // 아포스트로피(')는 %27로 인코딩하면 MyMemory가 디코딩 못 함 → 그대로 유지
+            // 공백은 + 유지 (MyMemory는 %20 미지원), 아포스트로피만 복원
             String encodedText = URLEncoder.encode(text, StandardCharsets.UTF_8)
-                    .replace("+", "%20")   // space: form-encode → URI-encode
                     .replace("%27", "'");   // apostrophe: %27 → ' (MyMemory 호환)
             String url = "https://api.mymemory.translated.net/get?q=" + encodedText
                     + "&langpair=" + sourceLang + "|" + targetLang;
