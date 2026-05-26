@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -42,13 +43,17 @@ import com.gdgswu.qos.util.TtsPlayer
 import java.util.UUID
 
 @Composable
-fun TranslationScreen(navController: NavController) {
+fun TranslationScreen(navController: NavController, vm: TranslationViewModel = viewModel()) {
     val context = LocalContext.current
     var selectedLanguage by remember { mutableStateOf(SupportedLanguage.FRENCH) }
     var selectedCategory by remember { mutableStateOf<PhraseCategory?>(null) }
     var inputText by remember { mutableStateOf("") }
     var translatedResult by remember { mutableStateOf<String?>(null) }
     var isCustomSaved by remember { mutableStateOf(false) }
+
+    // API 카드 (있으면 samplePhrases 대체)
+    val apiPhrases by vm.apiPhrases.collectAsState()
+    val baseList = if (apiPhrases.isNotEmpty()) apiPhrases else samplePhrases
 
     // 백엔드 TTS 플레이어
     val ttsPlayer = remember { TtsPlayer(context) }
@@ -64,11 +69,24 @@ fun TranslationScreen(navController: NavController) {
         translatedResult = null
         isCustomSaved = false
         selectedCategory = null
+        vm.loadPhrasebook()
+    }
+
+    // 카테고리 선택 시 API 재호출
+    LaunchedEffect(selectedCategory) {
+        val categoryParam = when (selectedCategory) {
+            PhraseCategory.MEDICAL   -> "medical"
+            PhraseCategory.SHELTER   -> "shelter"
+            PhraseCategory.FOOD      -> "food"
+            PhraseCategory.EMERGENCY -> null   // 백엔드 미지원 → 전체 조회
+            null                     -> null
+        }
+        vm.loadPhrasebook(categoryParam)
     }
 
     val filteredPhrases = if (selectedCategory != null)
-        samplePhrases.filter { it.category == selectedCategory }
-    else samplePhrases
+        baseList.filter { it.category == selectedCategory }
+    else baseList
 
     // 언어가 바뀌면 번역 결과 초기화
     LaunchedEffect(selectedLanguage) {
