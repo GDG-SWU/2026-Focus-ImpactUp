@@ -5,6 +5,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.os.Build
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
@@ -107,6 +108,7 @@ fun OcrScanScreen(navController: NavController) {
         // ── 카메라 프리뷰 ───────────────────────────────────────────────────
         CameraPreview(
             modifier = Modifier.fillMaxSize(),
+            flashOn = flashOn,
             onImageCaptureReady = { capture -> viewModel.imageCapture = capture }
         )
 
@@ -274,10 +276,17 @@ fun OcrScanScreen(navController: NavController) {
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
+    flashOn: Boolean = false,
     onImageCaptureReady: (ImageCapture) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    var cameraRef by remember { mutableStateOf<Camera?>(null) }
+
+    // flashOn 상태가 바뀌거나 카메라가 바인딩될 때 torch 제어
+    LaunchedEffect(flashOn, cameraRef) {
+        cameraRef?.cameraControl?.enableTorch(flashOn)
+    }
 
     AndroidView(
         modifier = modifier,
@@ -294,7 +303,7 @@ fun CameraPreview(
                     .build()
                 onImageCaptureReady(imageCapture)
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                cameraRef = cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview,

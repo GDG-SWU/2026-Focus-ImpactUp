@@ -36,6 +36,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.gdgswu.qos.R
 import com.gdgswu.qos.ui.theme.QOSTheme
+import com.gdgswu.qos.data.local.FavoritesPrefs
 import com.gdgswu.qos.data.model.*
 import com.gdgswu.qos.ui.navigation.Screen
 import com.gdgswu.qos.ui.theme.*
@@ -74,6 +75,11 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
         isCustomSaved = false
         selectedCategory = null
         vm.loadPhrasebook()
+    }
+
+    // 앱 시작 시 즐겨찾기 로드
+    LaunchedEffect(Unit) {
+        FavoritesPrefs.load(context)
     }
 
     // 카테고리 선택 시 API 재호출
@@ -203,6 +209,7 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
                     translated = translatedResult!!,
                     language = selectedLanguage,
                     isSaved = isCustomSaved,
+                    onPlayTts = { playTts(translatedResult!!, selectedLanguage.code) },
                     onSave = {
                         if (!isCustomSaved) {
                             FavoritesState.addCustom(
@@ -213,6 +220,7 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
                                     language = selectedLanguage
                                 )
                             )
+                            FavoritesPrefs.save(context)
                             isCustomSaved = true
                         }
                     }
@@ -313,7 +321,8 @@ fun TranslationResultCard(
     translated: String,
     language: SupportedLanguage,
     isSaved: Boolean,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onPlayTts: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -341,6 +350,23 @@ fun TranslationResultCard(
                     color = TextPrimary
                 )
             }
+            // TTS 재생 버튼
+            IconButton(
+                onClick = onPlayTts,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(QOSLightBlue)
+            ) {
+                Icon(
+                    Icons.Filled.VolumeUp,
+                    contentDescription = "Play",
+                    tint = QOSCyan,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            // 즐겨찾기 저장 버튼
             IconButton(
                 onClick = onSave,
                 modifier = Modifier.size(36.dp)
@@ -576,7 +602,7 @@ fun PhraseCard(
 
             // 별표 (즐겨찾기) 버튼
             IconButton(
-                onClick = { FavoritesState.togglePhrase(phrase) },
+                onClick = { FavoritesState.togglePhrase(phrase); FavoritesPrefs.save(context) },
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
