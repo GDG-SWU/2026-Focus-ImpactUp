@@ -1,6 +1,8 @@
 package com.gdgswu.qos.ui.ocr
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -62,7 +64,25 @@ class OcrViewModel : ViewModel() {
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        return bytes
+        return compressImage(bytes)
+    }
+
+    // 이미지를 최대 1024px, JPEG 80% 품질로 압축 (OCR에 충분한 해상도 유지)
+    private fun compressImage(bytes: ByteArray): ByteArray {
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
+        val maxSize = 1024
+        val scale = minOf(maxSize.toFloat() / bitmap.width, maxSize.toFloat() / bitmap.height, 1f)
+        val scaled = if (scale < 1f) {
+            Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * scale).toInt(),
+                (bitmap.height * scale).toInt(),
+                true
+            )
+        } else bitmap
+        val out = java.io.ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 80, out)
+        return out.toByteArray()
     }
 
     private suspend fun processImage(context: Context, bytes: ByteArray) {
