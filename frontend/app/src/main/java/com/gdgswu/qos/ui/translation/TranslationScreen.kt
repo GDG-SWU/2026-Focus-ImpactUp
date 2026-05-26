@@ -53,6 +53,7 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
     // 번역 상태 (ViewModel)
     val translatedResult by vm.translatedText.collectAsState()
     val isTranslating by vm.isTranslating.collectAsState()
+    val translateError by vm.translateError.collectAsState()
 
     // API 카드 (있으면 samplePhrases 대체)
     val apiPhrases by vm.apiPhrases.collectAsState()
@@ -87,9 +88,12 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
         vm.loadPhrasebook(categoryParam)
     }
 
-    val filteredPhrases = if (selectedCategory != null)
-        baseList.filter { it.category == selectedCategory }
-    else baseList
+    // EMERGENCY는 백엔드 미지원 → samplePhrases 고정 사용
+    val filteredPhrases = when (selectedCategory) {
+        PhraseCategory.EMERGENCY -> samplePhrases.filter { it.category == PhraseCategory.EMERGENCY }
+        null -> baseList
+        else -> baseList.filter { it.category == selectedCategory }
+    }
 
     // 언어가 바뀌면 번역 결과 초기화
     LaunchedEffect(selectedLanguage) {
@@ -161,6 +165,35 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
             }
         }
 
+        // ── 번역 오류 메시지 ───────────────────────────────────────────────────
+        if (translateError != null) {
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFFFF3F3))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Info,
+                        contentDescription = null,
+                        tint = Color(0xFFE57373),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = translateError!!,
+                        fontSize = 13.sp,
+                        color = Color(0xFFE57373)
+                    )
+                }
+            }
+        }
+
         // ── 번역 결과 카드 ─────────────────────────────────────────────────────
         if (translatedResult != null) {
             item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -221,7 +254,7 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
                     contentPadding = PaddingValues(0.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
                 ) {
-                    val hasSaved = FavoritesState.savedPhraseIds.isNotEmpty() || FavoritesState.customTranslations.isNotEmpty()
+                    val hasSaved = FavoritesState.savedPhrases.isNotEmpty() || FavoritesState.customTranslations.isNotEmpty()
                     Icon(
                         imageVector = if (hasSaved) Icons.Filled.Star else Icons.Filled.StarBorder,
                         contentDescription = "Saved Phrases",
@@ -507,7 +540,7 @@ fun PhraseCard(
 ) {
     val translation = phrase.getTranslation(language)
     val isRtl = language == SupportedLanguage.ARABIC
-    val isStarred = FavoritesState.savedPhraseIds.contains(phrase.id)
+    val isStarred = FavoritesState.isSaved(phrase.id)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -543,7 +576,7 @@ fun PhraseCard(
 
             // 별표 (즐겨찾기) 버튼
             IconButton(
-                onClick = { FavoritesState.togglePhrase(phrase.id) },
+                onClick = { FavoritesState.togglePhrase(phrase) },
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(

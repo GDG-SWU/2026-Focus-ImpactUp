@@ -38,6 +38,10 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
     private val _isTranslating = MutableStateFlow(false)
     val isTranslating: StateFlow<Boolean> = _isTranslating
 
+    /** 번역 오류 메시지 (미지원 언어 등) */
+    private val _translateError = MutableStateFlow<String?>(null)
+    val translateError: StateFlow<String?> = _translateError
+
     init {
         loadPhrasebook()
         loadRecentCards()
@@ -60,12 +64,19 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             _isTranslating.value = true
             _translatedText.value = null
+            _translateError.value = null
             val result = withTimeoutOrNull(10_000L) {
                 repository.translate(text, language.code)
             }
-            _translatedText.value = when (result) {
-                is ApiResult.Success -> result.data.translated_text
-                else -> null
+            when (result) {
+                is ApiResult.Success -> {
+                    if (result.data.success) {
+                        _translatedText.value = result.data.translated_text
+                    } else {
+                        _translateError.value = "${language.displayName} translation is not yet supported"
+                    }
+                }
+                else -> _translateError.value = "Translation failed. Check your connection."
             }
             _isTranslating.value = false
         }
@@ -73,6 +84,7 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
 
     fun clearTranslation() {
         _translatedText.value = null
+        _translateError.value = null
     }
 
     fun loadRecentCards() {

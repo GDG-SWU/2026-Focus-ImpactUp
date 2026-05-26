@@ -90,12 +90,10 @@ public class OcrServiceImpl implements OcrService {
         }
 
         // 실제 번역 수행 (소스 언어 자동 감지 → targetLanguage)
-        String translatedText = extractedRawText;
+        // 미지원 언어(ma, fu)이거나 API 오류 시 null 반환 → 프론트에서 번역 섹션 미표시
+        String translatedText = null;
         if (!extractedRawText.isBlank() && targetLanguage != null && !targetLanguage.isBlank()) {
-            String translated = translateService.translateText(extractedRawText, targetLanguage, null);
-            if (translated != null) {
-                translatedText = translated;
-            }
+            translatedText = translateService.translateText(extractedRawText, targetLanguage, null);
         }
 
         List<HighlightedKeywordDto> dynamicKeywords = new ArrayList<>();

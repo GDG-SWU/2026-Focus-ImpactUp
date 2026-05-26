@@ -21,12 +21,11 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.gdgswu.qos.data.model.FavoritesState
 import com.gdgswu.qos.ui.theme.QOSTheme
-import com.gdgswu.qos.data.model.samplePhrases
 import com.gdgswu.qos.ui.theme.*
 
 @Composable
 fun SavedPhrasesScreen(navController: NavController) {
-    val savedPhrases   = samplePhrases.filter { it.id in FavoritesState.savedPhraseIds }
+    val savedPhrases   = FavoritesState.savedPhrases
     val customPhrases  = FavoritesState.customTranslations
     val isEmpty        = savedPhrases.isEmpty() && customPhrases.isEmpty()
 
@@ -93,7 +92,7 @@ fun SavedPhrasesScreen(navController: NavController) {
                             english = phrase.english,
                             translated = "— ${phrase.category.displayName}",
                             languageLabel = phrase.category.displayName,
-                            onRemove = { FavoritesState.togglePhrase(phrase.id) }
+                            onRemove = { FavoritesState.togglePhrase(phrase) }
                         )
                     }
                 }
