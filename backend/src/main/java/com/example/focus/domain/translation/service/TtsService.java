@@ -34,8 +34,11 @@ public class TtsService {
     }
 
     private byte[] callGoogleTtsEngine(String text, String languageCode) throws Exception {
-        try (TextToSpeechClient textToSpeechClient = TextToSpeechClient.create()) {
+        TextToSpeechSettings settings = TextToSpeechSettings.newBuilder()
+                .setQuotaProjectId("project-c19a8e1f-a60d-4cdb-93f")
+                .build();
 
+        try (TextToSpeechClient textToSpeechClient = TextToSpeechClient.create(settings)) {
             SynthesisInput input = SynthesisInput.newBuilder().setText(text).build();
 
             VoiceSelectionParams voice = VoiceSelectionParams.newBuilder()

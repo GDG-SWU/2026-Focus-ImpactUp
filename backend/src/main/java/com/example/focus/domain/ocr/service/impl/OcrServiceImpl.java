@@ -1,20 +1,27 @@
 package com.example.focus.domain.ocr.service.impl;
 
+import com.example.focus.domain.ocr.dto.*;
 import com.example.focus.domain.ocr.entity.OcrDangerLexicon;
 import com.example.focus.domain.user.entity.User;
 import com.example.focus.domain.user.entity.HealthProfile;
-import com.example.focus.domain.ocr.dto.MatchedRiskDto;
-import com.example.focus.domain.ocr.dto.RiskCheckRequestDto;
-import com.example.focus.domain.ocr.dto.RiskCheckResponseDto;
 import com.example.focus.domain.ocr.repository.OcrDangerLexiconRepository;
 import com.example.focus.domain.user.repository.UserRepository;
 import com.example.focus.domain.ocr.service.OcrService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import com.google.cloud.vision.v1.*;
+import com.google.protobuf.ByteString;
+import org.springframework.web.reactive.function.client.WebClient;
+import com.google.cloud.translate.Translate;
+import com.google.cloud.translate.TranslateOptions;
+import com.google.cloud.translate.Translation;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +29,95 @@ public class OcrServiceImpl implements OcrService {
 
     private final OcrDangerLexiconRepository ocrDangerLexiconRepository;
     private final UserRepository userRepository;
+    private final WebClient.Builder webClientBuilder;
+
+    @Override
+    @Transactional
+    public OcrScanResponseDto processOcrScan(MultipartFile image, String targetLanguage) {
+
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("업로드된 이미지 파일이 없습니다.");
+        }
+
+        String extractedRawText = "";
+
+        try {
+            ImageAnnotatorSettings settings = ImageAnnotatorSettings.newBuilder()
+                    .setQuotaProjectId("project-c19a8e1f-a60d-4cdb-93f")
+                    .build();
+
+            try (ImageAnnotatorClient visionClient = ImageAnnotatorClient.create(settings)) {
+
+                ByteString imgBytes = ByteString.readFrom(image.getInputStream());
+                Image img = Image.newBuilder().setContent(imgBytes).build();
+
+                Feature feat = Feature.newBuilder().setType(Feature.Type.TEXT_DETECTION).build();
+
+                AnnotateImageRequest request = AnnotateImageRequest.newBuilder()
+                        .addFeatures(feat)
+                        .setImage(img)
+                        .build();
+
+                System.out.println("====== [GCP Vision] 구글 공식 OCR 엔진으로 이미지 송출을 시작합니다. ======");
+
+                BatchAnnotateImagesResponse response = visionClient.batchAnnotateImages(List.of(request));
+                List<AnnotateImageResponse> responses = response.getResponsesList();
+
+                for (AnnotateImageResponse res : responses) {
+                    if (res.hasError()) {
+                        System.out.printf("구글 비전 내부 에러: %s\n", res.getError().getMessage());
+                        throw new RuntimeException("내부 에러가 발생했습니다.");
+                    }
+
+                    if (!res.getTextAnnotationsList().isEmpty()) {
+                        extractedRawText = res.getTextAnnotationsList().get(0).getDescription();
+                        break;
+                    }
+                }
+            }
+
+        } catch (IOException e) {
+            System.out.println("이미지 스트림 처리 또는 세팅 로드 중 예외 발생");
+            e.printStackTrace();
+            throw new RuntimeException("이미지 파일 처리 실패", e);
+        } catch (Exception e) {
+            System.out.println("API 통신 중 예외 발생");
+            e.printStackTrace();
+            throw new RuntimeException("구글 OCR 서버 통신 실패", e);
+        }
+
+        if (extractedRawText.isBlank()) {
+            extractedRawText = "인식된 텍스트가 없습니다. 사진을 더 선명하게 찍어주세요.";
+        }
+
+        String translatedText = extractedRawText;
+
+        List<HighlightedKeywordDto> dynamicKeywords = new ArrayList<>();
+        String upperRawText = extractedRawText.toUpperCase();
+
+        List<OcrDangerLexicon> allLexicons = ocrDangerLexiconRepository.findAll();
+        for (OcrDangerLexicon lexicon : allLexicons) {
+            String substance = lexicon.getSubstanceName().toUpperCase();
+
+            if (upperRawText.contains(substance)) {
+                dynamicKeywords.add(new HighlightedKeywordDto(
+                        lexicon.getSubstanceName(),
+                        "warning",
+                        true,
+                        "red"
+                ));
+            }
+        }
+
+        return new OcrScanResponseDto(
+                extractedRawText,
+                translatedText,
+                dynamicKeywords,
+                "참고용으로만 사용하세요. 의료 판단에 사용하지 마세요.",
+                true
+        );
+    }
+
 
     @Override
     @Transactional(readOnly = true)

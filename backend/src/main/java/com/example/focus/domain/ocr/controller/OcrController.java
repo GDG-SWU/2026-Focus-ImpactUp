@@ -24,21 +24,9 @@ public class OcrController {
     @PostMapping(value = "/scan", consumes = "multipart/form-data")
     public ResponseEntity<OcrScanResponseDto> scanImage(
             @RequestPart("image") MultipartFile image,
-            @RequestParam(required = false) String targetLanguage) {
+            @RequestParam(required = false, defaultValue = "ko") String targetLanguage) {
 
-//        // 10MB 크기 유효성 검사(?)
-//        if (image.getSize() > 10 * 1024 * 1024) {
-//            throw new IllegalArgumentException("FILE_TOO_LARGE");
-//        }
-
-        HighlightedKeywordDto keyword = new HighlightedKeywordDto("Penicillin", "warning", true, "red");
-        OcrScanResponseDto response = new OcrScanResponseDto(
-                "Amoxicillin 500mg - contains Penicillin",
-                "아목시실린 500mg - 페니실린 성분 포함",
-                List.of(keyword),
-                "참고용으로만 사용하세요. 의료 판단에 사용하지 마세요.",
-                true
-        );
+        OcrScanResponseDto response = ocrService.processOcrScan(image, targetLanguage);
 
         return ResponseEntity.ok(response);
     }
