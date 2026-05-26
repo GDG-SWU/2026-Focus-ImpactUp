@@ -71,26 +71,44 @@ class OcrViewModel : ViewModel() {
 
     // 이미지를 최대 1280px, JPEG 90% 품질로 압축 + 회전 보정 (Vision API 인식률 향상)
     private fun compressImage(bytes: ByteArray, rotationDegrees: Int = 0): ByteArray {
-        var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
+        val maxSize = 1280
+
+        // 1단계: 이미지 크기만 읽어서 OOM 없이 적정 sampleSize 계산
+        val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOpts)
+        var sampleSize = 1
+        var w = boundsOpts.outWidth; var h = boundsOpts.outHeight
+        while (w / (sampleSize * 2) >= maxSize || h / (sampleSize * 2) >= maxSize) {
+            sampleSize *= 2
+        }
+
+        // 2단계: sampleSize 적용해서 메모리 안전하게 디코딩
+        val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOpts) ?: return bytes
 
         // CameraX 센서 회전 보정 (0/90/180/270도)
         if (rotationDegrees != 0) {
             val matrix = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            bitmap.recycle()
+            bitmap = rotated
         }
 
-        val maxSize = 1280
+        // 3단계: 최종 크기 조정 (sampleSize로도 여전히 크면 스케일 다운)
         val scale = minOf(maxSize.toFloat() / bitmap.width, maxSize.toFloat() / bitmap.height, 1f)
-        val scaled = if (scale < 1f) {
-            Bitmap.createScaledBitmap(
+        val final = if (scale < 1f) {
+            val scaled = Bitmap.createScaledBitmap(
                 bitmap,
                 (bitmap.width * scale).toInt(),
                 (bitmap.height * scale).toInt(),
                 true
             )
+            bitmap.recycle()
+            scaled
         } else bitmap
+
         val out = java.io.ByteArrayOutputStream()
-        scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        final.compress(Bitmap.CompressFormat.JPEG, 90, out)
         return out.toByteArray()
     }
 
