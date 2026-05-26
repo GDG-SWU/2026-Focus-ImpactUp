@@ -56,9 +56,8 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
     val isTranslating by vm.isTranslating.collectAsState()
     val translateError by vm.translateError.collectAsState()
 
-    // API 카드 (있으면 samplePhrases 대체)
-    val apiPhrases by vm.apiPhrases.collectAsState()
-    val baseList = if (apiPhrases.isNotEmpty()) apiPhrases else samplePhrases
+    // 로컬 samplePhrases 고정 사용 (백엔드 DB가 한글로 저장되어 있어 API 카드 미사용)
+    val baseList = samplePhrases
 
     // 백엔드 TTS 플레이어
     val ttsPlayer = remember { TtsPlayer(context) }
