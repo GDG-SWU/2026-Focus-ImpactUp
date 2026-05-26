@@ -33,9 +33,10 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
 
-      # 파이어베이스와 구글 TTS 라이브러리 키 파일 가상 경로 설정
+      # Firebase 키 파일 경로 (Storage 등 Firebase 전용)
+      # GOOGLE_APPLICATION_CREDENTIALS 제거 → Cloud Run 기본 서비스 계정(ADC) 사용
       - '--set-env-vars'
-      - 'FIREBASE_CREDENTIALS_PATH=/secrets/firebase-key.json,GOOGLE_APPLICATION_CREDENTIALS=/secrets/firebase-key.json'
+      - 'FIREBASE_CREDENTIALS_PATH=/secrets/firebase-key.json'
 
       # 모든 금고 연결
       - '--set-secrets'
