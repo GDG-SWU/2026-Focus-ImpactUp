@@ -325,74 +325,50 @@ fun ScanResultCard(
 ) {
     val isSafe = scanState == OcrScanState.FOUND_SAFE
     val accentColor = if (isSafe) Color(0xFF4CAF50) else Color(0xFFE53935)
-    val statusText  = if (isSafe) "Safe to use" else "Danger detected"
+    val bgColor     = if (isSafe) Color(0xFFF0FFF4) else Color(0xFFFFF3F0)
+    val statusText  = if (isSafe) "Safe" else "Danger"
     val statusIcon  = if (isSafe) Icons.Filled.CheckCircle else Icons.Filled.Cancel
+
+    // 약 이름: OCR 텍스트 첫 줄 또는 전체 (짧으면)
+    val medName = ocr.raw_text?.lines()?.firstOrNull()?.trim() ?: ""
+
+    // 설명 한 줄: 위험이면 경고 메시지, 안전이면 안내
+    val description = if (!isSafe) {
+        risk?.matched_risks?.firstOrNull()?.warning_message
+            ?: "Risk detected. Check with a medical professional."
+    } else {
+        "This medication is not in your allergy profile.\nVerified for dosage and expiration."
+    }
 
     Card(
         modifier  = Modifier.width(300.dp),
         shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        colors    = CardDefaults.cardColors(containerColor = bgColor),
+        border    = androidx.compose.foundation.BorderStroke(1.5.dp, accentColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-            // 상태 헤더
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(statusIcon, contentDescription = statusText, tint = accentColor, modifier = Modifier.size(36.dp))
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(statusText, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = accentColor)
-                    if (risk?.risk_level?.isNotBlank() == true) {
-                        Text("Risk: ${risk.risk_level}", fontSize = 12.sp, color = Color(0xFF888888))
-                    }
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = Color(0xFFAAAAAA), modifier = Modifier.size(16.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = Color(0xFFEEEEEE))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 번역 텍스트
-            if (!ocr.translated_text.isNullOrBlank()) {
-                Text("Translation", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF999999))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(ocr.translated_text.orEmpty(), fontSize = 13.sp, color = Color(0xFF1A1A1A), lineHeight = 18.sp)
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            // 위험 키워드
-            if (!risk?.matched_risks.isNullOrEmpty()) {
-                Text("Warnings", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF999999))
-                Spacer(modifier = Modifier.height(4.dp))
-                risk!!.matched_risks.forEach { matched ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFFFF3F3), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFE53935), modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(matched.warning_message, fontSize = 12.sp, color = Color(0xFFE53935))
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-            }
-
-            // 면책 고지
-            Text(
-                ocr.disclaimer.orEmpty(),
-                fontSize = 10.sp, color = Color(0xFFAAAAAA), lineHeight = 14.sp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(6.dp))
-                    .padding(8.dp)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                statusIcon,
+                contentDescription = statusText,
+                tint = accentColor,
+                modifier = Modifier.size(40.dp)
             )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                if (medName.isNotBlank()) {
+                    Text(medName, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
+                }
+                Text(statusText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = accentColor)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(description, fontSize = 12.sp, color = Color(0xFF666666), lineHeight = 17.sp)
+            }
+            IconButton(onClick = onDismiss, modifier = Modifier.size(20.dp)) {
+                Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = Color(0xFFAAAAAA), modifier = Modifier.size(14.dp))
+            }
         }
     }
 }
