@@ -49,6 +49,8 @@ public class TranslationController {
             trans1.put("ar", "أنا مريض بالسكري");
             trans1.put("fr", "Je suis diabétique");
             trans1.put("wo", "Dafa am sukar");
+            trans1.put("ma", "N be sukaro la");
+            trans1.put("fu", "Mi jogii sukaru");
             cardMedical1.put("translations", trans1);
             cardMedical1.put("tts_available", true);
             cardMedical1.put("usage_count", 0);
@@ -61,6 +63,8 @@ public class TranslationController {
             trans2.put("ar", "أحتاج إلى طبيب. ساعدني");
             trans2.put("fr", "J'ai besoin d'un médecin. S'il vous plaît, aidez-moi.");
             trans2.put("wo", "Dama soxla dotoor. Dimbali ma");
+            trans2.put("ma", "N be dɔgɔtɔrɔ sɔrɔ. N dɛmɛ");
+            trans2.put("fu", "Mi sɔɔri dɔgɔtɔrɔ. Wallitu mi");
             cardMedical2.put("translations", trans2);
             cardMedical2.put("tts_available", true);
             cardMedical2.put("usage_count", 0);
@@ -76,6 +80,8 @@ public class TranslationController {
             transShelter.put("ar", "أين أقرب ملجأ؟");
             transShelter.put("fr", "Où se trouve le refuge le plus proche?");
             transShelter.put("wo", "Ana bërëb u taax mi gën jége?");
+            transShelter.put("ma", "Hali farata kabila be min?");
+            transShelter.put("fu", "Hol to refuge ɓuri jemma?");
             cardShelter.put("translations", transShelter);
             cardShelter.put("tts_available", true);
             cardShelter.put("usage_count", 0);
@@ -91,6 +97,8 @@ public class TranslationController {
             transFood.put("ar", "أين يمكنني الحصول على الماء والطعام؟");
             transFood.put("fr", "Où puis-je obtenir de l'eau et de la nourriture?");
             transFood.put("wo", "Ana bërëb bu may jote ndox ak ñam?");
+            transFood.put("ma", "Ji ni dɔni be sɔrɔ min?");
+            transFood.put("fu", "Hol to mi sɔɔrirta ndiyam e ñamri?");
             cardFood.put("translations", transFood);
             cardFood.put("tts_available", true);
             cardFood.put("usage_count", 0);
