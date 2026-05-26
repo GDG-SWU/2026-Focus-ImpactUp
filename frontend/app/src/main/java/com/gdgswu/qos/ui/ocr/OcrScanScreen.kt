@@ -1,5 +1,15 @@
 package com.gdgswu.qos.ui.ocr
 
+import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.os.Build
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -7,8 +17,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,29 +32,64 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
+import com.gdgswu.qos.data.remote.model.OcrScanResponse
+import com.gdgswu.qos.data.remote.model.RiskCheckResponse
 import com.gdgswu.qos.ui.theme.*
-import com.gdgswu.qos.ui.theme.QOSTheme
 
-// 프레임 크기 상수 (딤 오버레이와 공유)
+// 프레임 크기 상수
 private val FRAME_W        = 260.dp
-private val FRAME_H        = 260.dp   // 정사각형
+private val FRAME_H        = 260.dp
 private val FRAME_CORNER   = 16.dp
-private val FRAME_Y_OFFSET = 20.dp   // 화면 중심에서 위로 띄우는 정도 (작을수록 아래)
-private val BOTTOM_CTRL    = 140.dp  // 하단 컨트롤 영역 높이 (하단 패딩 계산용)
+private val FRAME_Y_OFFSET = 20.dp
 
-enum class OcrScanState { SCANNING, FOUND_SAFE, FOUND_DANGER }
-
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun OcrScanScreen(navController: NavController) {
-    var scanState    by remember { mutableStateOf(OcrScanState.SCANNING) }
+    val context = LocalContext.current
+    val viewModel: OcrViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+
+    val cameraPermission = rememberPermissionState(android.Manifest.permission.CAMERA)
+
+    // 위험 감지 시 햅틱
+    LaunchedEffect(uiState) {
+        if (uiState is OcrUiState.Result) {
+            val risk = (uiState as OcrUiState.Result).risk
+            if (risk?.trigger_haptic == true) {
+                triggerHaptic(context)
+            }
+        }
+    }
+
+    if (!cameraPermission.status.isGranted) {
+        CameraPermissionScreen(
+            shouldShowRationale = cameraPermission.status.shouldShowRationale,
+            onRequest = { cameraPermission.launchPermissionRequest() },
+            onBack = { navController.popBackStack() }
+        )
+        return
+    }
+
+    val scanState = when (val s = uiState) {
+        is OcrUiState.Result -> if (s.risk?.risk_detected == true) OcrScanState.FOUND_DANGER else OcrScanState.FOUND_SAFE
+        else -> OcrScanState.SCANNING
+    }
+
     var flashOn      by remember { mutableStateOf(false) }
     var shutterPulse by remember { mutableStateOf(false) }
 
@@ -57,40 +104,34 @@ fun OcrScanScreen(navController: NavController) {
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
-        // ── 카메라 프리뷰 플레이스홀더 ───────────────────────────────────────
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A1A)))
+        // ── 카메라 프리뷰 ───────────────────────────────────────────────────
+        CameraPreview(
+            modifier = Modifier.fillMaxSize(),
+            onImageCaptureReady = { capture -> viewModel.imageCapture = capture }
+        )
 
-        // ── 딤 오버레이: 프레임 영역만 투명하게 뚫음 ─────────────────────────
+        // ── 딤 오버레이 ──────────────────────────────────────────────────────
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         ) {
-            // 전체를 어둡게
             drawRect(Color.Black.copy(alpha = 0.60f))
-
-            // 프레임 위치와 동일한 구멍 뚫기 (BlendMode.Clear)
-            val fw = FRAME_W.toPx()
-            val fh = FRAME_H.toPx()
+            val fw = FRAME_W.toPx(); val fh = FRAME_H.toPx()
             val fx = (size.width - fw) / 2f
-            // 프레임 중심 = 화면 중심 - FRAME_Y_OFFSET
             val fy = (size.height - fh) / 2f - FRAME_Y_OFFSET.toPx()
             drawRoundRect(
-                color        = Color.Black,
-                topLeft      = Offset(fx, fy),
-                size         = Size(fw, fh),
-                cornerRadius = CornerRadius(FRAME_CORNER.toPx()),
-                blendMode    = BlendMode.Clear
+                color = Color.Black, topLeft = Offset(fx, fy),
+                size = Size(fw, fh), cornerRadius = CornerRadius(FRAME_CORNER.toPx()),
+                blendMode = BlendMode.Clear
             )
         }
 
-        // ── 상태별 엣지 그라디언트 (SAFE/DANGER) ─────────────────────────────
+        // ── 상태별 엣지 그라디언트 ────────────────────────────────────────────
         if (scanState != OcrScanState.SCANNING) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val c = if (scanState == OcrScanState.FOUND_SAFE)
-                    Color(0xFF4CAF50) else Color(0xFFE53935)
-                val ew = size.width  * 0.05f
-                val eh = size.height * 0.05f
+                val c = if (scanState == OcrScanState.FOUND_SAFE) Color(0xFF4CAF50) else Color(0xFFE53935)
+                val ew = size.width * 0.05f; val eh = size.height * 0.05f
                 listOf(
                     Brush.horizontalGradient(listOf(c.copy(0.4f), Color.Transparent), 0f, ew),
                     Brush.horizontalGradient(listOf(Color.Transparent, c.copy(0.4f)), size.width - ew, size.width),
@@ -100,45 +141,61 @@ fun OcrScanScreen(navController: NavController) {
             }
         }
 
-        // ── 팝업 카드: 프레임 바로 위에 고정 배치 ────────────────────────────
+        // ── 결과 팝업 카드 ────────────────────────────────────────────────────
         AnimatedVisibility(
-            visible = scanState != OcrScanState.SCANNING,
+            visible = uiState is OcrUiState.Result,
             modifier = Modifier
                 .align(Alignment.Center)
-                // 프레임 위: 프레임 상단 - gap(16dp) - 카드(≈60dp half-height)
                 .offset(y = -(FRAME_H / 2 + FRAME_Y_OFFSET + 28.dp + 60.dp)),
             enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { -it / 2 },
             exit  = fadeOut(tween(200)) + slideOutVertically(tween(200)) { -it / 2 }
         ) {
-            ScanResultCard(scanState = scanState)
+            if (uiState is OcrUiState.Result) {
+                val r = uiState as OcrUiState.Result
+                ScanResultCard(
+                    ocr = r.ocr,
+                    risk = r.risk,
+                    scanState = scanState,
+                    onDismiss = { viewModel.reset() }
+                )
+            }
         }
 
-        // ── 스캔 중 텍스트: 프레임 바로 위 ──────────────────────────────────
+        // ── 처리 중 인디케이터 ────────────────────────────────────────────────
         AnimatedVisibility(
-            visible = scanState == OcrScanState.SCANNING,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(y = -(FRAME_H / 2 + FRAME_Y_OFFSET + 16.dp))
+            visible = uiState is OcrUiState.Processing,
+            modifier = Modifier.align(Alignment.Center).offset(y = -(FRAME_H / 2 + FRAME_Y_OFFSET + 16.dp))
         ) {
-            Text(
-                "Detecting text...",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                Text("Analyzing...", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            }
         }
 
-        // ── 프레임 (딤 오버레이 구멍과 같은 위치) ────────────────────────────
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(y = -FRAME_Y_OFFSET),
-            contentAlignment = Alignment.Center
+        // ── 스캔 중 텍스트 ────────────────────────────────────────────────────
+        AnimatedVisibility(
+            visible = uiState is OcrUiState.Idle,
+            modifier = Modifier.align(Alignment.Center).offset(y = -(FRAME_H / 2 + FRAME_Y_OFFSET + 16.dp))
         ) {
-            CornerBracketFrame(
-                width = FRAME_W, height = FRAME_H,
-                color = frameColor, strokeWidth = 4.dp, cornerLength = 36.dp
-            )
+            Text("Place text inside the frame", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        }
+
+        // ── 에러 스낵바 ───────────────────────────────────────────────────────
+        if (uiState is OcrUiState.ScanError) {
+            Box(modifier = Modifier.align(Alignment.Center).offset(y = -(FRAME_H / 2 + FRAME_Y_OFFSET + 16.dp))) {
+                Text(
+                    (uiState as OcrUiState.ScanError).message,
+                    color = Color(0xFFFF5252), fontSize = 13.sp, textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .background(Color.Black.copy(0.7f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        }
+
+        // ── 프레임 ────────────────────────────────────────────────────────────
+        Box(modifier = Modifier.align(Alignment.Center).offset(y = -FRAME_Y_OFFSET), contentAlignment = Alignment.Center) {
+            CornerBracketFrame(width = FRAME_W, height = FRAME_H, color = frameColor, strokeWidth = 4.dp, cornerLength = 36.dp)
             if (scanState == OcrScanState.SCANNING) {
                 ScanLine(width = FRAME_W - 8.dp, height = FRAME_H - 8.dp)
             }
@@ -156,7 +213,7 @@ fun OcrScanScreen(navController: NavController) {
                 Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
             }
             Text(
-                text = "Place text inside the frame",
+                text = "Scan medicine label",
                 color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f), textAlign = TextAlign.Center
             )
@@ -171,13 +228,9 @@ fun OcrScanScreen(navController: NavController) {
 
         // ── 하단 컨트롤 ──────────────────────────────────────────────────────
         Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 56.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 56.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // 셔터 버튼
             val shutterScale by animateFloatAsState(
                 targetValue = if (shutterPulse) 0.88f else 1f,
                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -190,7 +243,10 @@ fun OcrScanScreen(navController: NavController) {
                     .graphicsLayer { scaleX = shutterScale; scaleY = shutterScale }
                     .border(3.dp, Color.White, CircleShape)
                     .clip(CircleShape)
-                    .clickable { shutterPulse = true },
+                    .clickable(enabled = uiState is OcrUiState.Idle || uiState is OcrUiState.ScanError) {
+                        shutterPulse = true
+                        viewModel.captureAndScan(context)
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -200,19 +256,67 @@ fun OcrScanScreen(navController: NavController) {
                         .background(Color.White.copy(alpha = if (shutterPulse) 0.6f else 0.25f))
                 )
             }
-
             Spacer(modifier = Modifier.height(10.dp))
-            Text("Auto scan is on", color = Color.Gray, fontSize = 12.sp)
+            if (uiState is OcrUiState.Result) {
+                Text(
+                    "Tap anywhere to scan again",
+                    color = Color.White.copy(0.7f), fontSize = 12.sp,
+                    modifier = Modifier.clickable { viewModel.reset() }
+                )
+            } else {
+                Text("Tap shutter to scan", color = Color.Gray, fontSize = 12.sp)
+            }
         }
     }
 }
 
+// ── 카메라 프리뷰 ──────────────────────────────────────────────────────────────
+@Composable
+fun CameraPreview(
+    modifier: Modifier = Modifier,
+    onImageCaptureReady: (ImageCapture) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            val previewView = PreviewView(ctx)
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+                val imageCapture = ImageCapture.Builder()
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .build()
+                onImageCaptureReady(imageCapture)
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    imageCapture
+                )
+            }, ContextCompat.getMainExecutor(ctx))
+            previewView
+        }
+    )
+}
+
 // ── 결과 팝업 카드 ─────────────────────────────────────────────────────────────
 @Composable
-fun ScanResultCard(scanState: OcrScanState) {
-    val isSafe      = scanState == OcrScanState.FOUND_SAFE
+fun ScanResultCard(
+    ocr: OcrScanResponse,
+    risk: RiskCheckResponse?,
+    scanState: OcrScanState,
+    onDismiss: () -> Unit
+) {
+    val isSafe = scanState == OcrScanState.FOUND_SAFE
     val accentColor = if (isSafe) Color(0xFF4CAF50) else Color(0xFFE53935)
-    val statusText  = if (isSafe) "Safe to use" else "Danger"
+    val statusText  = if (isSafe) "Safe to use" else "Danger detected"
     val statusIcon  = if (isSafe) Icons.Filled.CheckCircle else Icons.Filled.Cancel
 
     Card(
@@ -221,26 +325,123 @@ fun ScanResultCard(scanState: OcrScanState) {
         colors    = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // 아이콘 + 약품명/상태 (같은 행)
+        Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+            // 상태 헤더
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(statusIcon, contentDescription = statusText,
-                    tint = accentColor, modifier = Modifier.size(40.dp))
-                Spacer(modifier = Modifier.width(12.dp))
+                Icon(statusIcon, contentDescription = statusText, tint = accentColor, modifier = Modifier.size(36.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text("Amoxicillin", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
-                    Text(statusText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = accentColor)
+                    Text(statusText, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = accentColor)
+                    if (risk?.risk_level?.isNotBlank() == true) {
+                        Text("Risk: ${risk.risk_level}", fontSize = 12.sp, color = Color(0xFF888888))
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Filled.Close, contentDescription = "Dismiss", tint = Color(0xFFAAAAAA), modifier = Modifier.size(16.dp))
                 }
             }
-            // 설명은 전체 너비 (아이콘 영역 침범 안 함)
+
             Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = Color(0xFFEEEEEE))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 번역 텍스트
+            if (!ocr.translated_text.isNullOrBlank()) {
+                Text("Translation", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF999999))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(ocr.translated_text.orEmpty(), fontSize = 13.sp, color = Color(0xFF1A1A1A), lineHeight = 18.sp)
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            // 위험 키워드
+            if (!risk?.matched_risks.isNullOrEmpty()) {
+                Text("Warnings", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF999999))
+                Spacer(modifier = Modifier.height(4.dp))
+                risk!!.matched_risks.forEach { matched ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF3F3), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFE53935), modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(matched.warning_message, fontSize = 12.sp, color = Color(0xFFE53935))
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            // 면책 고지
             Text(
-                "This medication is not in your allergy profile.\nVerified for dosage and expiration.",
-                fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 17.sp
+                ocr.disclaimer.orEmpty(),
+                fontSize = 10.sp, color = Color(0xFFAAAAAA), lineHeight = 14.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF5F5F5), RoundedCornerShape(6.dp))
+                    .padding(8.dp)
             )
         }
     }
 }
+
+// ── 카메라 권한 화면 ───────────────────────────────────────────────────────────
+@Composable
+fun CameraPermissionScreen(
+    shouldShowRationale: Boolean,
+    onRequest: () -> Unit,
+    onBack: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(8.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Back", tint = Color.White)
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(64.dp))
+            Text(
+                if (shouldShowRationale) "Camera access is needed to scan medicine labels."
+                else "Please allow camera access to use the label scanner.",
+                color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
+            )
+            Button(
+                onClick = onRequest,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+            ) {
+                Text("Allow Camera", color = Color.Black, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+// ── 햅틱 ────────────────────────────────────────────────────────────────────
+private fun triggerHaptic(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+        vm?.defaultVibrator?.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+    } else {
+        @Suppress("DEPRECATION")
+        val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            v?.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            v?.vibrate(400)
+        }
+    }
+}
+
+// ── 스캔 상태 ────────────────────────────────────────────────────────────────
+enum class OcrScanState { SCANNING, FOUND_SAFE, FOUND_DANGER }
 
 // ── 스캔 라인 애니메이션 ────────────────────────────────────────────────────────
 @Composable
@@ -253,77 +454,41 @@ fun ScanLine(width: Dp, height: Dp) {
     )
     Canvas(modifier = Modifier.size(width, height)) {
         val y = yFraction * size.height
-        drawLine(Color(0xFF29B6F6), Offset(0f, y), Offset(size.width, y),
-            strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(Color(0xFF29B6F6), Offset(0f, y), Offset(size.width, y), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
     }
 }
 
-// ── 4 모서리 꺾쇠 브라켓 (둥근 모서리) ────────────────────────────────────────
+// ── 4 모서리 꺾쇠 브라켓 ───────────────────────────────────────────────────────
 @Composable
 fun CornerBracketFrame(width: Dp, height: Dp, color: Color, strokeWidth: Dp, cornerLength: Dp) {
     Canvas(modifier = Modifier.size(width, height)) {
-        val sw = strokeWidth.toPx()
-        val cl = cornerLength.toPx()
-        val r  = 16.dp.toPx()
-        val w  = size.width
-        val h  = size.height
+        val sw = strokeWidth.toPx(); val cl = cornerLength.toPx()
+        val r = 16.dp.toPx(); val w = size.width; val h = size.height
         val paint = Paint().apply {
-            this.color       = color
-            this.strokeWidth = sw
-            this.style       = PaintingStyle.Stroke
-            this.strokeCap   = StrokeCap.Round
-            this.strokeJoin  = StrokeJoin.Round
-            this.isAntiAlias = true
+            this.color = color; this.strokeWidth = sw
+            this.style = PaintingStyle.Stroke; this.strokeCap = StrokeCap.Round
+            this.strokeJoin = StrokeJoin.Round; this.isAntiAlias = true
         }
         fun corner(path: Path) = drawContext.canvas.drawPath(path, paint)
-
-        corner(Path().apply {   // 상단 왼쪽
+        corner(Path().apply {
             moveTo(0f, cl); lineTo(0f, r)
-            arcTo(androidx.compose.ui.geometry.Rect(0f, 0f, r*2, r*2), 180f, 90f, false)
+            arcTo(androidx.compose.ui.geometry.Rect(0f, 0f, r * 2, r * 2), 180f, 90f, false)
             lineTo(cl, 0f)
         })
-        corner(Path().apply {   // 상단 오른쪽
-            moveTo(w-cl, 0f); lineTo(w-r, 0f)
-            arcTo(androidx.compose.ui.geometry.Rect(w-r*2, 0f, w, r*2), 270f, 90f, false)
+        corner(Path().apply {
+            moveTo(w - cl, 0f); lineTo(w - r, 0f)
+            arcTo(androidx.compose.ui.geometry.Rect(w - r * 2, 0f, w, r * 2), 270f, 90f, false)
             lineTo(w, cl)
         })
-        corner(Path().apply {   // 하단 왼쪽
+        corner(Path().apply {
             moveTo(cl, h); lineTo(r, h)
-            arcTo(androidx.compose.ui.geometry.Rect(0f, h-r*2, r*2, h), 90f, 90f, false)
-            lineTo(0f, h-cl)
+            arcTo(androidx.compose.ui.geometry.Rect(0f, h - r * 2, r * 2, h), 90f, 90f, false)
+            lineTo(0f, h - cl)
         })
-        corner(Path().apply {   // 하단 오른쪽
-            moveTo(w, h-cl); lineTo(w, h-r)
-            arcTo(androidx.compose.ui.geometry.Rect(w-r*2, h-r*2, w, h), 0f, 90f, false)
-            lineTo(w-cl, h)
+        corner(Path().apply {
+            moveTo(w, h - cl); lineTo(w, h - r)
+            arcTo(androidx.compose.ui.geometry.Rect(w - r * 2, h - r * 2, w, h), 0f, 90f, false)
+            lineTo(w - cl, h)
         })
-    }
-}
-
-// ── Previews ──────────────────────────────────────────────────────────────────
-
-@Preview(showBackground = true, showSystemUi = true, name = "OCR – Scanning")
-@Composable
-fun OcrScanningPreview() {
-    QOSTheme { OcrScanScreen(navController = rememberNavController()) }
-}
-
-@Preview(showBackground = true, name = "Scan Result – Safe")
-@Composable
-fun ScanResultSafePreview() {
-    QOSTheme {
-        Column(modifier = Modifier.padding(16.dp)) {
-            ScanResultCard(scanState = OcrScanState.FOUND_SAFE)
-        }
-    }
-}
-
-@Preview(showBackground = true, name = "Scan Result – Danger")
-@Composable
-fun ScanResultDangerPreview() {
-    QOSTheme {
-        Column(modifier = Modifier.padding(16.dp)) {
-            ScanResultCard(scanState = OcrScanState.FOUND_DANGER)
-        }
     }
 }

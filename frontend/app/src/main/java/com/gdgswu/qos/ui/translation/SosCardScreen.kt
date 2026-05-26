@@ -71,11 +71,7 @@ fun SosCardScreen(
         "Companions" to companionText
     )
 
-    var selectedLanguage by remember { mutableStateOf(UserProfilePrefs.loadLanguage(context)) }
-    // SOS 카드는 번역 대상 언어이므로 English면 French로 fallback
-    if (selectedLanguage == SupportedLanguage.ENGLISH) {
-        selectedLanguage = SupportedLanguage.FRENCH
-    }
+    var selectedLanguage by remember { mutableStateOf(SupportedLanguage.ENGLISH) }
 
     Column(
         modifier = Modifier
@@ -124,7 +120,7 @@ fun SosCardScreen(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(SupportedLanguage.entries.filter { it != SupportedLanguage.ENGLISH }) { lang ->
+            items(SupportedLanguage.entries) { lang ->
                 val isSelected = selectedLanguage == lang
                 FilterChip(
                     selected = isSelected,
@@ -178,50 +174,40 @@ fun SosCardScreen(
                         CircularProgressIndicator(color = QOSRed)
                     }
                 } else if (apiSosCard != null) {
-                    // API 데이터 우선 표시
+                    // API 데이터: 항상 개별 행으로 표시 (번역 있으면 번역, 없으면 영어 그대로)
                     val card = apiSosCard!!
                     val langCode = selectedLanguage.code
-                    val translatedSentence = card.translations[langCode]
 
-                    if (translatedSentence != null) {
-                        Text(
-                            translatedSentence,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextPrimary
-                        )
-                    } else {
-                        // 번역 없으면 로컬 데이터로 표시
-                        localProfile.forEach { (key, value) ->
-                            SosCardRow(label = key, value = value)
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
-
+                    // 알레르기 — 번역 label 우선, 빈 문자열이거나 없으면 code(영어) 표시
+                    val allergyLabels = card.allergies_translated.orEmpty()
+                        .map { item -> item.label[langCode]?.takeIf { it.isNotBlank() } ?: item.code }
+                        .ifEmpty { allergies }
+                    SosCardRow(
+                        label = "Allergies",
+                        value = allergyLabels.joinToString(", ").ifBlank { "None" }
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // 번역된 건강 항목 표시
-                    if (card.conditions_translated.isNotEmpty()) {
-                        Text("CONDITIONS".uppercase(), fontSize = 11.sp, color = TextSecondary,
-                            fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            card.conditions_translated.mapNotNull { it.label[langCode] }.joinToString(", ").ifBlank { "None" },
-                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary
-                        )
+                    // 컨디션 — 번역 label 우선, 빈 문자열이거나 없으면 code(영어) 표시
+                    val conditionLabels = card.conditions_translated.orEmpty()
+                        .map { item -> item.label[langCode]?.takeIf { it.isNotBlank() } ?: item.code }
+                        .ifEmpty { conditions }
+                    SosCardRow(
+                        label = "Conditions",
+                        value = conditionLabels.joinToString(", ").ifBlank { "None" }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 혈액형 — 국제 표기 그대로 (번역 불필요)
+                    val bt = card.blood_type ?: bloodType
+                    if (bt.isNotBlank() && bt != "Unknown") {
+                        SosCardRow(label = "Blood type", value = bt)
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    if (card.allergies_translated.isNotEmpty()) {
-                        Text("ALLERGIES".uppercase(), fontSize = 11.sp, color = TextSecondary,
-                            fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            card.allergies_translated.mapNotNull { it.label[langCode] }.joinToString(", ").ifBlank { "None" },
-                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
+                    // 동반자
+                    SosCardRow(label = "Companions", value = companionText)
+                    Spacer(modifier = Modifier.height(12.dp))
                 } else {
                     // API 실패 시 로컬 데이터 fallback
                     localProfile.forEach { (key, value) ->

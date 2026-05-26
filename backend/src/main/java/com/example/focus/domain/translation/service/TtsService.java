@@ -1,7 +1,6 @@
 package com.example.focus.domain.translation.service;
 
 import com.google.cloud.texttospeech.v1.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
@@ -21,10 +20,10 @@ public class TtsService {
 
     public byte[] generateSpeech(String text, String languageCode) throws Exception {
         switch (languageCode.toLowerCase()) {
-            case "ar": // 아랍어
-            case "fr": // 프랑스어
-                return callGoogleTtsEngine(text, languageCode);
-
+            case "ar":
+                return callGoogleTtsEngine(text, "ar-XA");
+            case "fr":
+                return callGoogleTtsEngine(text, "fr-FR");
             case "wo": // 월로프어
             case "ma": // 만딩카어
             case "fu": // 풀라니어
@@ -54,11 +53,10 @@ public class TtsService {
                 System.out.println("====== [GCP TTS] 구글 공식 API 호출을 시작합니다. (Language: " + languageCode + ") ======");
                 SynthesizeSpeechResponse response = textToSpeechClient.synthesizeSpeech(input, voice, audioConfig);
                 return response.getAudioContent().toByteArray();
-
             } catch (Exception e) {
-                System.out.println("[구글 공식 TTS API 통신 예외 발생]");
+                System.out.println("[구글 공식 TTS API 통신 예외 발생] mock-audio로 대체합니다.");
                 e.printStackTrace();
-                throw e;
+                return getMockAudio();
             }
         }
     }
@@ -84,10 +82,21 @@ public class TtsService {
                     .bodyToMono(byte[].class)
                     .block();
         } catch (Exception e) {
-            System.out.println("[TTS 외부 API 통신 실패] 임시 더미 음성 스트림으로 대체합니다.");
+            System.out.println("[TTS 외부 API 통신 실패] mock-audio로 대체합니다.");
             e.printStackTrace();
+            return getMockAudio();
+        }
+    }
 
-            return "dummy_audio_stream_bytes".getBytes();
+    private byte[] getMockAudio() {
+        try {
+            ClassPathResource resource = new ClassPathResource("mock-audio.mp3");
+            try (InputStream inputStream = resource.getInputStream()) {
+                return StreamUtils.copyToByteArray(inputStream);
+            }
+        } catch (Exception e) {
+            System.out.println("mock-audio.mp3 파일을 찾을 수 없습니다.");
+            throw new RuntimeException("TTS 오디오 생성 실패", e);
         }
     }
 }

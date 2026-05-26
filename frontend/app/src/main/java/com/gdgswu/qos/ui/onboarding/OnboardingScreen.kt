@@ -143,7 +143,8 @@ fun OnboardingScreen(
                             preferredLanguage = lang.code,
                             conditions = selectedConditions.toList(),
                             allergies = selectedAllergies.toList(),
-                            companions = companions
+                            companions = companions,
+                            bloodType = selectedBloodType.takeIf { it != "Unknown" }
                         )
                     }
                 )

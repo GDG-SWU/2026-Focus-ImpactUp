@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gdgswu.qos.data.remote.ApiResult
 import com.gdgswu.qos.data.remote.QosRepository
-import com.gdgswu.qos.data.remote.TokenManager
 import com.gdgswu.qos.data.remote.model.HealthInfoRequest
 import com.gdgswu.qos.data.remote.model.OnboardRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +30,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         preferredLanguage: String,
         conditions: List<String>,
         allergies: List<String>,
-        companions: List<String>
+        companions: List<String>,
+        bloodType: String? = null
     ) {
         viewModelScope.launch {
             _uiState.value = OnboardingUiState.Loading
@@ -41,17 +41,15 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                 preferred_language = preferredLanguage,
                 health_info = HealthInfoRequest(
                     conditions = conditions,
-                    allergies = allergies
+                    allergies = allergies,
+                    blood_type = bloodType
                 ),
                 companions = companions
             )
 
             when (val result = repository.onboard(request)) {
                 is ApiResult.Success -> {
-                    TokenManager.saveUserId(
-                        getApplication<Application>().applicationContext,
-                        result.data.user_id
-                    )
+                    // 토큰 및 userId는 QosRepository.onboard() 내부에서 저장됨
                     _uiState.value = OnboardingUiState.Success
                 }
                 is ApiResult.Error -> {

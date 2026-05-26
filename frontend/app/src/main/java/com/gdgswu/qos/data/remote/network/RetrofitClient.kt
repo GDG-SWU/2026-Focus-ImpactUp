@@ -11,24 +11,19 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // TODO: 백엔드 배포 후 실제 Base URL로 교체
-    // 에뮬레이터 로컬 테스트: http://10.0.2.2:8080/api/v1/
-    private const val BASE_URL = "http://10.0.2.2:8080/api/v1/"
+    private const val BASE_URL = "https://focus-service-306840608220.asia-northeast3.run.app/api/v1/"
 
     /**
      * 요청 인터셉터 — 저장된 JWT를 Authorization 헤더에 자동 추가
      */
     private fun authInterceptor(context: Context) = okhttp3.Interceptor { chain ->
         val token = TokenManager.getToken(context)
-        val request = if (token != null) {
-            chain.request().newBuilder()
-                .addHeader("Authorization", "Bearer $token")
-                .addHeader("Accept", "application/json")
-                .build()
-        } else {
-            chain.request()
-        }
-        chain.proceed(request)
+        val userId = TokenManager.getUserId(context)
+        val builder = chain.request().newBuilder()
+            .addHeader("Accept", "application/json")
+        if (token != null) builder.addHeader("Authorization", "Bearer $token")
+        if (userId != null) builder.addHeader("X-User-Id", userId)
+        chain.proceed(builder.build())
     }
 
     /**

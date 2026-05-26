@@ -18,10 +18,17 @@ data class OnboardRequest(
     val companions: List<String>          // ["child", "pregnant"] — 최상위로 이동
 )
 
+// POST /users/onboard 실제 응답 구조 (accessToken + userProfile 래핑)
+data class OnboardResponse(
+    val accessToken: String?,
+    val expiresIn: Long?,
+    val userProfile: UserProfileResponse?
+)
+
 data class HealthInfoRequest(
     val conditions: List<String>,
-    val allergies: List<String>
-    // companion_info 제거됨
+    val allergies: List<String>,
+    val blood_type: String? = null
 )
 
 data class UpdateProfileRequest(
@@ -33,21 +40,22 @@ data class UpdateProfileRequest(
 
 // POST /users/onboard, GET /users/profile, PATCH /users/profile 공통 응답
 data class UserProfileResponse(
-    val user_id: String,
+    val user_id: String?,
     val preferred_language: String,
-    val locale: String,
-    val onboarding_completed: Boolean,
-    val created_at: String,
-    val updated_at: String,
-    val offline: Boolean,
-    val health: SimpleHealthResponse,
-    val companions: List<String>          // ["child", "pregnant"]
+    val locale: String?,
+    val onboarding_completed: Boolean = false,
+    val created_at: String?,
+    val updated_at: String?,
+    val offline: Boolean = false,
+    val health: SimpleHealthResponse?,
+    val companions: List<String>?
 )
 
 // health 객체 — user_id/updated_at/offline 제거됨
 data class SimpleHealthResponse(
-    val conditions: List<String>,
-    val allergies: List<String>
+    val conditions: List<String>?,
+    val allergies: List<String>?,
+    val blood_type: String? = null
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -202,15 +210,16 @@ data class RecentCardsResponse(
 data class SosCardResponse(
     val user_id: String,
     val generated_at: String,
-    val translations: Map<String, String>,
-    val conditions_translated: List<TranslatedHealthItem>,
-    val allergies_translated: List<TranslatedHealthItem>,
-    val offline: Boolean
+    val blood_type: String? = null,
+    val translations: Map<String, String>?,
+    val conditions_translated: List<TranslatedHealthItem>?,
+    val allergies_translated: List<TranslatedHealthItem>?,
+    val offline: Boolean = false
 )
 
 data class TranslatedHealthItem(
     val code: String,
-    val label: Map<String, String>
+    val label: Map<String, String> = emptyMap()
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -234,11 +243,11 @@ data class TtsResponse(
 // ══════════════════════════════════════════════════════════════════════════════
 
 data class OcrScanResponse(
-    val raw_text: String,
-    val translated_text: String,
-    val highlighted_keywords: List<HighlightedKeyword>,
-    val disclaimer: String,
-    val offline: Boolean
+    val raw_text: String?,
+    val translated_text: String?,
+    val highlighted_keywords: List<HighlightedKeyword>?,
+    val disclaimer: String?,
+    val offline: Boolean = false
 )
 
 data class HighlightedKeyword(

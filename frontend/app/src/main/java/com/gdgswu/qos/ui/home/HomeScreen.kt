@@ -12,26 +12,40 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.gdgswu.qos.R
+import com.gdgswu.qos.ui.guide.WhatToDoViewModel
+import com.gdgswu.qos.ui.guide.day1Missions
+import com.gdgswu.qos.ui.guide.day2Missions
 import com.gdgswu.qos.ui.theme.QOSTheme
 import com.gdgswu.qos.ui.map.MapFilter
 import com.gdgswu.qos.ui.navigation.Screen
 import com.gdgswu.qos.ui.theme.*
 
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = viewModel(),
+    whatToDoViewModel: WhatToDoViewModel = viewModel()
+) {
+    val isOnline by viewModel.isOnline.collectAsState()
+    val completedIds = whatToDoViewModel.completedMissionIds.toSet()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -57,6 +71,7 @@ fun HomeScreen(navController: NavController) {
 
         // 긴급 액션 카드
         EmergencyActionCard(
+            isOnline = isOnline,
             onWhatToDoClick = { navController.navigate(Screen.WhatToDo.route) },
             onGoToMapClick = { navController.navigate(Screen.Map.route) }
         )
@@ -71,13 +86,21 @@ fun HomeScreen(navController: NavController) {
         // Quick Actions
         QuickActionsSection(navController = navController)
 
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 48h 미션 진행 위젯
+        MissionProgressWidget(
+            completedIds = completedIds,
+            onViewAll = { navController.navigate(Screen.WhatToDo.route) }
+        )
+
         // 하단 네비바 높이만큼 여백 확보 (스크롤 가능하도록)
         Spacer(modifier = Modifier.height(96.dp))
     }
 }
 
 @Composable
-fun EmergencyActionCard(onWhatToDoClick: () -> Unit, onGoToMapClick: () -> Unit) {
+fun EmergencyActionCard(isOnline: Boolean?, onWhatToDoClick: () -> Unit, onGoToMapClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -102,9 +125,17 @@ fun EmergencyActionCard(onWhatToDoClick: () -> Unit, onGoToMapClick: () -> Unit)
                 Text("Tenerife Port", fontSize = 14.sp, color = TextSecondary)
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
-                    Icons.Filled.Wifi,
+                    when (isOnline) {
+                        true  -> Icons.Filled.Wifi
+                        false -> Icons.Filled.WifiOff
+                        null  -> Icons.Filled.Wifi
+                    },
                     contentDescription = null,
-                    tint = TextSecondary,
+                    tint = when (isOnline) {
+                        true  -> StatusGreen
+                        false -> Color(0xFFFF6F00)
+                        null  -> TextSecondary
+                    },
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -190,6 +221,111 @@ fun ProfileCard(onClick: () -> Unit) {
             fontWeight = FontWeight.SemiBold
         )
         Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White)
+    }
+}
+
+// ── 48h Mission Progress Widget ───────────────────────────────────────────────
+
+@Composable
+fun MissionProgressWidget(completedIds: Set<Int>, onViewAll: () -> Unit) {
+    val allMissions = day1Missions + day2Missions
+    val total = allMissions.size
+    val completed = allMissions.count { it.id in completedIds }
+    val progress = if (total > 0) completed.toFloat() / total else 0f
+    val allDone = completed == total
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clickable(onClick = onViewAll),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = if (allDone) StatusGreen else QOSRed,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "48h Survival Progress",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "$completed/$total",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (allDone) StatusGreen else QOSRed
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 프로그레스 바
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFFEEEEEE))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (allDone) StatusGreen else QOSRed)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Day 1 / Day 2 칩
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val day1Done = day1Missions.count { it.id in completedIds }
+                val day2Done = day2Missions.count { it.id in completedIds }
+                DayChip("Day 1", day1Done, day1Missions.size, QOSRed)
+                DayChip("Day 2", day2Done, day2Missions.size, Color(0xFF5C6BC0))
+            }
+
+            if (allDone) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "All done! You're ready. ✓",
+                    fontSize = 13.sp,
+                    color = StatusGreen,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayChip(label: String, done: Int, total: Int, color: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.1f))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            "$label  $done/$total",
+            fontSize = 11.sp,
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 

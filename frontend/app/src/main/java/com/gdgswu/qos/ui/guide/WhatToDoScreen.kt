@@ -25,9 +25,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.gdgswu.qos.ui.home.HomeViewModel
 import com.gdgswu.qos.ui.navigation.Screen
 import com.gdgswu.qos.ui.theme.QOSTheme
 import com.gdgswu.qos.ui.theme.*
@@ -52,7 +55,7 @@ data class DayPlan(
 )
 
 // Day 1: 0–24h — 즉각 생존
-private val day1Missions = listOf(
+internal val day1Missions = listOf(
     Mission(
         id = 1,
         icon = Icons.Filled.Home,
@@ -101,7 +104,7 @@ private val day1Missions = listOf(
 )
 
 // Day 2: 24–48h — 안정화
-private val day2Missions = listOf(
+internal val day2Missions = listOf(
     Mission(
         id = 11,
         icon = Icons.Filled.RestaurantMenu,
@@ -157,18 +160,81 @@ val dayPlans = listOf(
 // TutorialState에서 참조하는 기존 missions 변수 유지 (호환성)
 val missions = day1Missions
 
+// ── Emergency contacts ────────────────────────────────────────────────────────
+
+private data class EmergencyContact(val name: String, val number: String, val desc: String, val color: Color)
+
+private val emergencyContacts = listOf(
+    EmergencyContact("112",                "112",       "Spain Emergency (Police / Ambulance / Fire)", Color(0xFFD32F2F)),
+    EmergencyContact("Cruz Roja",          "900221122", "Red Cross Spain — free 24h helpline",        Color(0xFFC62828)),
+    EmergencyContact("Salvamento Marítimo","900202202", "Maritime Rescue — sea emergency (free)",     Color(0xFF1565C0)),
+    EmergencyContact("CEAR",               "915980535", "Spanish Refugee Aid Commission",             Color(0xFF6A1B9A)),
+    EmergencyContact("ACNUR / UNHCR",      "915563634", "UN Refugee Agency Spain",                   Color(0xFF0277BD)),
+)
+
+@Composable
+private fun EmergencyContactsDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Emergency Contacts", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                emergencyContacts.forEach { contact ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(contact.color.copy(alpha = 0.08f))
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(contact.color.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(contact.number.take(3), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = contact.color)
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(contact.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contact.color)
+                            Text(contact.number, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF212121))
+                            Text(contact.desc, fontSize = 11.sp, color = TextSecondary, lineHeight = 14.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
-fun WhatToDoScreen(navController: NavController) {
+fun WhatToDoScreen(
+    navController: NavController,
+    homeViewModel: HomeViewModel = viewModel(),
+    whatToDoViewModel: WhatToDoViewModel = viewModel()
+) {
+    val isOnline by homeViewModel.isOnline.collectAsState()
+    val survivalActions by homeViewModel.survivalActions.collectAsState()
     var selectedDayIndex by remember { mutableStateOf(0) }
     var expandedMissionId by remember { mutableStateOf<Int?>(null) }
-    val completedIds = TutorialState.completedMissionIds
+    var showEmergencyDialog by remember { mutableStateOf(false) }
+    val completedIds = whatToDoViewModel.completedMissionIds
 
     val plan = dayPlans[selectedDayIndex]
     val dayMissions = plan.missions
-    // Day별로 완료된 미션만 필터
     val dayCompletedCount = dayMissions.count { completedIds.contains(it.id) }
+
+    if (showEmergencyDialog) {
+        EmergencyContactsDialog(onDismiss = { showEmergencyDialog = false })
+    }
 
     Column(
         modifier = Modifier
@@ -186,6 +252,12 @@ fun WhatToDoScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+            }
+            IconButton(
+                onClick = { showEmergencyDialog = true },
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Icon(Icons.Filled.Warning, contentDescription = "Emergency contacts", tint = Color(0xFFD32F2F))
             }
         }
 
@@ -235,21 +307,45 @@ fun WhatToDoScreen(navController: NavController) {
                 }
             }
 
-            // ── 위치 + 온라인 상태 ─────────────────────────────────────────────
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.LocationOn, contentDescription = null,
-                    tint = TextSecondary, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Tenerife Port", fontSize = 12.sp, color = TextSecondary)
-                Spacer(modifier = Modifier.width(16.dp))
-                Icon(Icons.Filled.Wifi, contentDescription = null,
-                    tint = StatusGreen, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Online", fontSize = 12.sp, color = StatusGreen)
+            // ── Survival stage 뱃지 (API) ────────────────────────────────────
+            if (survivalActions != null) {
+                val stage = survivalActions!!.stage.replace("_", " ").replaceFirstChar { it.uppercase() }
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFFFFF3E0))
+                            .padding(horizontal = 14.dp, vertical = 5.dp)
+                    ) {
+                        Text("Stage: $stage", fontSize = 12.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Medium)
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            // ── 온라인 상태 ───────────────────────────────────────────────────
+            if (isOnline != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val onlineColor = if (isOnline == true) StatusGreen else Color(0xFFFF6F00)
+                    Icon(
+                        if (isOnline == true) Icons.Filled.Wifi else Icons.Filled.WifiOff,
+                        contentDescription = null,
+                        tint = onlineColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        if (isOnline == true) "Online" else "Offline — cached data",
+                        fontSize = 12.sp, color = onlineColor
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -284,10 +380,7 @@ fun WhatToDoScreen(navController: NavController) {
                     onToggle = {
                         expandedMissionId = if (isExpanded) null else mission.id
                     },
-                    onComplete = {
-                        if (completedIds.contains(mission.id)) completedIds.remove(mission.id)
-                        else completedIds.add(mission.id)
-                    },
+                    onComplete = { whatToDoViewModel.toggleMission(mission.id) },
                     onStart = { TutorialState.start(mission) }
                 )
 

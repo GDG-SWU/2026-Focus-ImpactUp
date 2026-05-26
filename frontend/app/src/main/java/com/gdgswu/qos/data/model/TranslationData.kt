@@ -23,8 +23,8 @@ enum class SupportedLanguage(val displayName: String, val code: String) {
     FRENCH("Français", "fr"),
     ARABIC("العربية", "ar"),
     WOLOF("Wolof", "wo"),
-    MANDINKA("Mandinka", "mnk"),
-    FULA("Fulfulde", "ff")
+    MANDINKA("Mandinka", "ma"),
+    FULA("Fulfulde", "fu")
 }
 
 val samplePhrases = listOf(

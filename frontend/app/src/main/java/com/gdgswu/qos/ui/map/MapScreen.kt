@@ -16,18 +16,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.gdgswu.qos.R
 import com.gdgswu.qos.data.remote.model.FacilityItem
 import com.gdgswu.qos.ui.theme.QOSTheme
 import com.gdgswu.qos.ui.theme.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 enum class MapFilter(val label: String, val iconRes: Int?, val iconPressedRes: Int?) {
     ALL("All", null, null),
@@ -45,14 +62,63 @@ data class Institution(
     val isOpen: Boolean,
     val status: InstitutionStatus,
     val services: List<String>,
-    val address: String
+    val address: String,
+    val facilityId: String = ""    // API string ID (GET /facilities/:id 용)
 )
+
+/** Vector drawable → Bitmap 변환 (AppCompatResources 사용으로 소프트웨어 캔버스 렌더링 보장) */
+fun vectorToBitmapDrawable(context: android.content.Context, resId: Int, heightDp: Int = 48): BitmapDrawable {
+    val dp = context.resources.displayMetrics.density
+    val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, resId)!!.mutate()
+    val iW = drawable.intrinsicWidth.takeIf { it > 0 } ?: (33 * dp).toInt()
+    val iH = drawable.intrinsicHeight.takeIf { it > 0 } ?: (48 * dp).toInt()
+    val targetH = (heightDp * dp).toInt()
+    val targetW = (targetH.toFloat() * iW / iH).toInt()
+    val bitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, targetW, targetH)
+    drawable.draw(canvas)
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/** 카테고리 → 핀 drawable 리소스 ID */
+fun pinResForCategory(category: String): Int = when (category) {
+    "hospital" -> R.drawable.ic_pin_hospital
+    "camp"     -> R.drawable.ic_pin_shelter
+    "ngo"      -> R.drawable.ic_pin_support
+    "water"    -> R.drawable.ic_pin_water
+    else       -> R.drawable.ic_pin_support
+}
+
+/** 내 위치용 파란 점 마커 */
+fun createMyLocationMarker(context: android.content.Context): BitmapDrawable {
+    val dp = context.resources.displayMetrics.density
+    val size = (22 * dp).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val cx = size / 2f
+    canvas.drawCircle(cx, cx, cx, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+    })
+    canvas.drawCircle(cx, cx, cx * 0.65f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.parseColor("#2979FF")
+    })
+    return BitmapDrawable(context.resources, bitmap)
+}
 
 enum class InstitutionStatus(val label: String, val color: Color) {
     AVAILABLE("Available", Color(0xFF4CAF50)),
     CROWDED("Crowded", Color(0xFFFFC107)),
     UNAVAILABLE("Unavailable", Color(0xFFF44336))
 }
+
+// 지도 마커용 샘플 (API 실패 시 fallback — Santa Cruz de Tenerife 좌표)
+val sampleFacilityItems = listOf(
+    FacilityItem("s1", "Cruz Roja Tenerife",       "ngo",      28.4637, -16.2518, 300.0,  "available",   true),
+    FacilityItem("s2", "Campo de Refugiados Sur",  "camp",     28.4580, -16.2650, 1200.0, "crowded",     true),
+    FacilityItem("s3", "Hospital Universitario",   "hospital", 28.4700, -16.2620, 2100.0, "available",   true),
+    FacilityItem("s4", "Punto de Agua Gratuita",   "water",    28.4660, -16.2480, 500.0,  "available",   true),
+)
 
 // 샘플 데이터 - 실제로는 API/로컬 DB에서
 val sampleInstitutions = listOf(
@@ -93,11 +159,12 @@ fun FacilityItem.toInstitution(index: Int): Institution {
         isOpen = this.operating,
         status = status,
         services = emptyList(),
-        address = ""
+        address = "",
+        facilityId = this.id
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MapScreen(
     navController: NavController,
@@ -113,6 +180,30 @@ fun MapScreen(
     val apiFacilities by viewModel.facilities.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
+    val deviceLocation by viewModel.deviceLocation.collectAsState()
+    val facilityDetail by viewModel.facilityDetail.collectAsState()
+    val facilityStatus by viewModel.facilityStatus.collectAsState()
+    val isDetailLoading by viewModel.isDetailLoading.collectAsState()
+    val isLocationLoading by viewModel.isLocationLoading.collectAsState()
+
+    // 위치 권한 처리
+    val locationPermissions = rememberMultiplePermissionsState(
+        listOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+    LaunchedEffect(locationPermissions.allPermissionsGranted) {
+        if (locationPermissions.allPermissionsGranted) {
+            viewModel.loadDeviceLocation()
+        }
+    }
+    LaunchedEffect(Unit) {
+        if (!locationPermissions.allPermissionsGranted) {
+            locationPermissions.launchMultiplePermissionRequest()
+        }
+    }
 
     // API 카테고리 필터 변경 시 재로드
     LaunchedEffect(selectedFilter) {
@@ -204,6 +295,9 @@ fun MapScreen(
                             onClick = {
                                 selectedInstitution = inst
                                 showDetailSheet = true
+                                if (inst.facilityId.isNotBlank()) {
+                                    viewModel.loadFacilityDetail(inst.facilityId)
+                                }
                             }
                         )
                     }
@@ -213,19 +307,147 @@ fun MapScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // ── TODO: 지도 영역 (Mapbox 연동 후 교체) ──────────────────────────
-            Box(
+            // ── 지도 영역 (osmdroid OpenStreetMap) ──────────────────────────
+            val ctx = LocalContext.current
+            val lifecycleOwner = LocalLifecycleOwner.current
+
+            val mapView = remember {
+                MapView(ctx).apply {
+                    Configuration.getInstance().apply {
+                        load(ctx, ctx.getSharedPreferences("osmdroid", 0))
+                        userAgentValue = ctx.packageName
+                        osmdroidBasePath = ctx.cacheDir   // 내부 캐시 — 권한 불필요
+                    }
+                    setTileSource(TileSourceFactory.MAPNIK)
+                    setMultiTouchControls(true)
+                    controller.setZoom(14.0)
+                    // Santa Cruz de Tenerife 기본 중심
+                    controller.setCenter(GeoPoint(28.4636, -16.2518))
+                }
+            }
+
+            // 라이프사이클 → mapView.onResume/onPause 연결
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                        Lifecycle.Event.ON_PAUSE  -> mapView.onPause()
+                        else -> {}
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+
+            // 내 위치 확인되면 지도 중심 이동
+            LaunchedEffect(deviceLocation) {
+                deviceLocation?.let { loc ->
+                    mapView.controller.animateTo(GeoPoint(loc.lat, loc.lng))
+                }
+            }
+
+            AndroidView(
+                factory = { mapView },
+                modifier = Modifier.fillMaxSize(),
+                update = { mv ->
+                    mv.overlays.clear()
+
+                    // 내 위치 마커 (파란 점)
+                    deviceLocation?.let { loc ->
+                        val myMarker = Marker(mv).apply {
+                            position = GeoPoint(loc.lat, loc.lng)
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                            title = "My Location"
+                            icon = createMyLocationMarker(ctx)
+                        }
+                        mv.overlays.add(myMarker)
+                    }
+
+                    // 시설 마커 (API 없으면 샘플 fallback + 칩 필터 적용)
+                    val allFacilities = if (apiFacilities.isNotEmpty()) apiFacilities else sampleFacilityItems
+                    val markerFacilities = if (selectedFilter == null) allFacilities else allFacilities.filter { f ->
+                        when (selectedFilter) {
+                            MapFilter.HOSPITAL -> f.category == "hospital"
+                            MapFilter.CAMP     -> f.category == "camp"
+                            MapFilter.NGO      -> f.category == "ngo"
+                            MapFilter.WATER    -> f.category == "water"
+                            else               -> true
+                        }
+                    }
+                    markerFacilities.forEachIndexed { index, facility ->
+                        val inst = facility.toInstitution(index)
+                        val marker = Marker(mv).apply {
+                            position = GeoPoint(facility.lat, facility.lng)
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            title = facility.name
+                            snippet = inst.category.label
+                            icon = vectorToBitmapDrawable(ctx, pinResForCategory(facility.category))
+                            setOnMarkerClickListener { _, _ ->
+                                selectedInstitution = inst
+                                showDetailSheet = true
+                                if (inst.facilityId.isNotBlank()) {
+                                    viewModel.loadFacilityDetail(inst.facilityId)
+                                }
+                                true
+                            }
+                        }
+                        mv.overlays.add(marker)
+                    }
+                    mv.invalidate()
+                }
+            )
+
+            // ── 우측 지도 컨트롤 (위치 + 줌 in/out) ──────────────────────────
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFE8F0E8)),
-                contentAlignment = Alignment.Center
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.Map, contentDescription = null,
-                        tint = Color(0xFFAAAAAA), modifier = Modifier.size(64.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Map area (Mapbox)", color = Color(0xFFAAAAAA), fontSize = 14.sp)
-                    Text("TODO: offline tile 연동", color = Color(0xFFBBBBBB), fontSize = 12.sp)
+                // 내 위치 새로고침
+                SmallFloatingActionButton(
+                    onClick = {
+                        deviceLocation?.let { loc ->
+                            mapView.controller.animateTo(GeoPoint(loc.lat, loc.lng))
+                        }
+                        viewModel.loadDeviceLocation()
+                    },
+                    containerColor = Color.White,
+                    contentColor = QOSRed,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    if (isLocationLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = QOSRed,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Filled.GpsFixed, contentDescription = "My Location",
+                            modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                // 줌 인
+                SmallFloatingActionButton(
+                    onClick = { mapView.controller.zoomIn() },
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF444444),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Zoom In",
+                        modifier = Modifier.size(20.dp))
+                }
+
+                // 줌 아웃
+                SmallFloatingActionButton(
+                    onClick = { mapView.controller.zoomOut() },
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF444444),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Filled.Remove, contentDescription = "Zoom Out",
+                        modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -284,9 +506,11 @@ fun MapScreen(
                     selectedFilter = selectedFilter,
                     onFilterSelected = { selectedFilter = it }
                 )
-                // ── 오프라인 경고 배너 ─────────────────────────────────────
-                Spacer(modifier = Modifier.height(8.dp))
-                OfflineBanner()
+                // ── 오프라인 경고 배너 (온라인이면 숨김) ──────────────────────
+                if (isOnline != true) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OfflineBanner()
+                }
             }
         }
     }
@@ -294,21 +518,52 @@ fun MapScreen(
     // ── 기관 상세 바텀시트 ───────────────────────────────────────────────────────
     if (showDetailSheet && selectedInstitution != null) {
         ModalBottomSheet(
-            onDismissRequest = { showDetailSheet = false },
+            onDismissRequest = {
+                showDetailSheet = false
+                viewModel.clearFacilityDetail()
+            },
             sheetState = detailSheetState
         ) {
-            InstitutionDetailSheet(
-                institution = selectedInstitution!!,
-                onNavigate = { /* TODO: 길찾기 시작 */ },
-                onDismiss = { showDetailSheet = false }
-            )
+            // API 상세 데이터로 Institution 보완
+            val enriched = selectedInstitution!!.let { base ->
+                if (facilityDetail != null) {
+                    val det = facilityDetail!!
+                    val statusFromApi = when (facilityStatus?.availability ?: det.availability) {
+                        "available"   -> InstitutionStatus.AVAILABLE
+                        "crowded"     -> InstitutionStatus.CROWDED
+                        "unavailable" -> InstitutionStatus.UNAVAILABLE
+                        else          -> base.status
+                    }
+                    base.copy(
+                        services = det.services,
+                        address  = det.address,
+                        isOpen   = det.operating,
+                        status   = statusFromApi
+                    )
+                } else base
+            }
+            if (isDetailLoading) {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = QOSRed)
+                }
+            } else {
+                InstitutionDetailSheet(
+                    institution = enriched,
+                    waitTimeMin = facilityStatus?.wait_time_min,
+                    contactPhone = facilityDetail?.contact_phone,
+                    onNavigate = { /* TODO: 길찾기 */ },
+                    onDismiss = {
+                        showDetailSheet = false
+                        viewModel.clearFacilityDetail()
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
 fun OfflineBanner(modifier: Modifier = Modifier) {
-    // TODO: 온라인일 때 숨김
     Card(
         modifier = modifier.padding(horizontal = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
@@ -383,6 +638,8 @@ fun InstitutionListItem(institution: Institution, onClick: () -> Unit) {
 @Composable
 fun InstitutionDetailSheet(
     institution: Institution,
+    waitTimeMin: Int? = null,
+    contactPhone: String? = null,
     onNavigate: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -404,36 +661,63 @@ fun InstitutionDetailSheet(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 거리 + 운영여부
+        // 거리 + 운영여부 + 대기시간
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.LocationOn, contentDescription = null,
                 tint = TextSecondary, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(institution.distance, fontSize = 13.sp, color = TextSecondary)
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Icon(Icons.Filled.AccessTime, contentDescription = null,
                 tint = if (institution.isOpen) StatusGreen else StatusRed,
                 modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(if (institution.isOpen) "Open" else "Closed",
                 fontSize = 13.sp, color = if (institution.isOpen) StatusGreen else StatusRed)
+            if (waitTimeMin != null && waitTimeMin > 0) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("~${waitTimeMin}min wait", fontSize = 12.sp, color = TextSecondary)
+            }
+        }
+
+        // 주소
+        if (institution.address.isNotBlank()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Place, contentDescription = null,
+                    tint = TextSecondary, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(institution.address, fontSize = 12.sp, color = TextSecondary)
+            }
+        }
+
+        // 연락처
+        if (!contactPhone.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Phone, contentDescription = null,
+                    tint = TextSecondary, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(contactPhone, fontSize = 12.sp, color = TextSecondary)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // 서비스 목록
-        Text("Services", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-        Spacer(modifier = Modifier.height(8.dp))
-        institution.services.forEach { service ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                Icon(Icons.Filled.Check, contentDescription = null,
-                    tint = StatusGreen, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(service, fontSize = 13.sp, color = TextPrimary)
+        if (institution.services.isNotEmpty()) {
+            Text("Services", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Spacer(modifier = Modifier.height(8.dp))
+            institution.services.forEach { service ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                    Icon(Icons.Filled.Check, contentDescription = null,
+                        tint = StatusGreen, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(service, fontSize = 13.sp, color = TextPrimary)
+                }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
 
         // 길찾기 버튼
         Button(
@@ -481,6 +765,8 @@ fun InstitutionDetailSheetPreview() {
     QOSTheme {
         InstitutionDetailSheet(
             institution = sampleInstitutions[0],
+            waitTimeMin = 15,
+            contactPhone = "+34 922 123 456",
             onNavigate = {},
             onDismiss = {}
         )
