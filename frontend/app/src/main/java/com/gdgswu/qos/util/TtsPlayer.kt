@@ -22,12 +22,10 @@ class TtsPlayer(private val context: Context) {
     private val repository = QosRepository(context)
     private var mediaPlayer: MediaPlayer? = null
 
-    /** text를 languageCode 언어로 읽어줍니다. 백엔드 실패 시 기기 TTS로 fallback합니다. */
+    /** text를 languageCode 언어로 읽어줍니다. Android 기기 TTS를 사용합니다. */
     suspend fun play(text: String, languageCode: String) {
-        val backendSuccess = tryBackendTts(text, languageCode)
-        if (!backendSuccess) {
-            tryAndroidTts(text, languageCode)
-        }
+        // 백엔드 GCP TTS 미설정 → Android 내장 TTS 직접 사용
+        tryAndroidTts(text, languageCode)
     }
 
     // ── 백엔드 GCP TTS ──────────────────────────────────────────────────────────

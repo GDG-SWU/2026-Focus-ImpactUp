@@ -187,23 +187,7 @@ fun MapScreen(
     val isDetailLoading by viewModel.isDetailLoading.collectAsState()
     val isLocationLoading by viewModel.isLocationLoading.collectAsState()
 
-    // 위치 권한 처리
-    val locationPermissions = rememberMultiplePermissionsState(
-        listOf(
-            android.Manifest.permission.ACCESS_FINE_LOCATION,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-    )
-    LaunchedEffect(locationPermissions.allPermissionsGranted) {
-        if (locationPermissions.allPermissionsGranted) {
-            viewModel.loadDeviceLocation()
-        }
-    }
-    LaunchedEffect(Unit) {
-        if (!locationPermissions.allPermissionsGranted) {
-            locationPermissions.launchMultiplePermissionRequest()
-        }
-    }
+    // 위치 권한 처리 (지도 중심은 Tenerife 고정 — 자동 GPS 이동 없음)
 
     // API 카테고리 필터 변경 시 재로드
     LaunchedEffect(selectedFilter) {
@@ -339,12 +323,7 @@ fun MapScreen(
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            // 내 위치 확인되면 지도 중심 이동
-            LaunchedEffect(deviceLocation) {
-                deviceLocation?.let { loc ->
-                    mapView.controller.animateTo(GeoPoint(loc.lat, loc.lng))
-                }
-            }
+            // 지도 중심 Tenerife 고정 (deviceLocation 따라 이동하지 않음)
 
             AndroidView(
                 factory = { mapView },
