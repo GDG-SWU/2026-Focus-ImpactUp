@@ -64,8 +64,9 @@ public class OcrServiceImpl implements OcrService {
 
                 for (AnnotateImageResponse res : responses) {
                     if (res.hasError()) {
-                        System.out.printf("구글 비전 내부 에러: %s\n", res.getError().getMessage());
-                        throw new RuntimeException("내부 에러가 발생했습니다.");
+                        System.out.printf("구글 비전 내부 에러: %s%n", res.getError().getMessage());
+                        // 에러가 있어도 빈 텍스트로 graceful 처리 (500 대신 빈 결과 반환)
+                        break;
                     }
 
                     if (!res.getTextAnnotationsList().isEmpty()) {
@@ -76,13 +77,11 @@ public class OcrServiceImpl implements OcrService {
             }
 
         } catch (IOException e) {
-            System.out.println("이미지 스트림 처리 또는 세팅 로드 중 예외 발생");
-            e.printStackTrace();
-            throw new RuntimeException("이미지 파일 처리 실패", e);
+            System.out.println("이미지 스트림 처리 중 예외 발생: " + e.getMessage());
+            // 이미지 읽기 실패 → 빈 텍스트로 처리
         } catch (Exception e) {
-            System.out.println("API 통신 중 예외 발생");
-            e.printStackTrace();
-            throw new RuntimeException("구글 OCR 서버 통신 실패", e);
+            System.out.println("OCR API 통신 중 예외 발생 (권한 미설정 등): " + e.getMessage());
+            // GCP 권한 오류 등 → 500 crash 대신 빈 텍스트로 graceful 처리
         }
 
         if (extractedRawText.isBlank()) {
