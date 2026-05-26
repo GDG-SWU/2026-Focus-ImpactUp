@@ -78,10 +78,10 @@ public class TranslateService {
         if ("wo".equals(targetLang)) return null;
 
         try {
-            String langPair = sourceLang + "|" + targetLang;
+            // langpair의 | 기호는 URL 인코딩하지 않음 (MyMemory 요구사항)
             String encodedText = URLEncoder.encode(text, StandardCharsets.UTF_8);
-            String encodedPair = URLEncoder.encode(langPair, StandardCharsets.UTF_8);
-            String url = "https://api.mymemory.translated.net/get?q=" + encodedText + "&langpair=" + encodedPair;
+            String url = "https://api.mymemory.translated.net/get?q=" + encodedText
+                    + "&langpair=" + sourceLang + "|" + targetLang;
 
             Map<?, ?> response = webClient.get()
                     .uri(url)
@@ -91,6 +91,13 @@ public class TranslateService {
 
             if (response == null) return null;
 
+            // responseStatus 200 확인
+            Object responseStatus = response.get("responseStatus");
+            if (responseStatus == null || !responseStatus.toString().equals("200")) {
+                System.out.println("[TranslateService] MyMemory 응답 오류: status=" + responseStatus);
+                return null;
+            }
+
             Object responseData = response.get("responseData");
             if (!(responseData instanceof Map)) return null;
 
@@ -98,10 +105,11 @@ public class TranslateService {
             if (translatedText == null) return null;
 
             String result = translatedText.toString().trim();
-            // MyMemory가 번역 실패 시 원문 그대로 반환하는 경우 걸러냄
+            // 번역 실패 시 원문 반환 또는 오류 메시지 걸러냄
             if (result.isBlank() || result.equalsIgnoreCase(text.trim())) return null;
+            if (result.toUpperCase().startsWith("INVALID")) return null;
 
-            System.out.println("[TranslateService] MyMemory 번역 성공: " + langPair);
+            System.out.println("[TranslateService] MyMemory 번역 성공: " + sourceLang + "|" + targetLang);
             return result;
 
         } catch (Exception e) {
