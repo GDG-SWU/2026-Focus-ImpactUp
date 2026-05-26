@@ -41,11 +41,8 @@ public class OcrServiceImpl implements OcrService {
         String extractedRawText = "";
 
         try {
-            ImageAnnotatorSettings settings = ImageAnnotatorSettings.newBuilder()
-                    .setQuotaProjectId("project-c19a8e1f-a60d-4cdb-93f")
-                    .build();
-
-            try (ImageAnnotatorClient visionClient = ImageAnnotatorClient.create(settings)) {
+            // Cloud Run에서 Application Default Credentials 자동 사용 (quotaProjectId 제거)
+            try (ImageAnnotatorClient visionClient = ImageAnnotatorClient.create()) {
 
                 ByteString imgBytes = ByteString.readFrom(image.getInputStream());
                 Image img = Image.newBuilder().setContent(imgBytes).build();

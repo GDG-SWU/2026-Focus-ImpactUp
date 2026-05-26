@@ -46,10 +46,8 @@ public class TranslateService {
 
     private String tryGcpTranslate(String text, String googleCode, String sourceLangCode) {
         try {
-            Translate translate = TranslateOptions.newBuilder()
-                    .setQuotaProjectId("project-c19a8e1f-a60d-4cdb-93f")
-                    .build()
-                    .getService();
+            // Cloud Run에서 Application Default Credentials 자동 사용 (quotaProjectId 제거)
+            Translate translate = TranslateOptions.getDefaultInstance().getService();
 
             Translate.TranslateOption target = Translate.TranslateOption.targetLanguage(googleCode);
             Translation translation;
