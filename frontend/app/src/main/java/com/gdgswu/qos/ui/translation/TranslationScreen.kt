@@ -564,6 +564,7 @@ fun PhraseCard(
     onPlayTts: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val translation = phrase.getTranslation(language)
     val isRtl = language == SupportedLanguage.ARABIC
     val isStarred = FavoritesState.isSaved(phrase.id)
