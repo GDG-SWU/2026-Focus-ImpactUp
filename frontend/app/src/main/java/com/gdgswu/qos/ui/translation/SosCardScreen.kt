@@ -34,6 +34,25 @@ import com.gdgswu.qos.ui.navigation.Screen
 import com.gdgswu.qos.ui.theme.QOSTheme
 import com.gdgswu.qos.ui.theme.*
 
+// 의료 용어 번역 로컬 fallback (DB에 번역 없을 때 사용)
+private val medicalTermTranslations: Map<String, Map<String, String>> = mapOf(
+    // 알레르기
+    "Penicillin"   to mapOf("fr" to "Pénicilline",     "ar" to "البنسلين",            "wo" to "Penicilline"),
+    "Aspirin"      to mapOf("fr" to "Aspirine",         "ar" to "الأسبرين",            "wo" to "Aspirin"),
+    "Ibuprofen"    to mapOf("fr" to "Ibuprofène",       "ar" to "إيبوبروفين",          "wo" to "Ibuprofen"),
+    "Latex"        to mapOf("fr" to "Latex",             "ar" to "اللاتكس",             "wo" to "Latex"),
+    "Sulfa drugs"  to mapOf("fr" to "Sulfamides",        "ar" to "أدوية السلفا",        "wo" to "Sulfa drugs"),
+    // 기저질환
+    "Diabetes"     to mapOf("fr" to "Diabète",           "ar" to "مرض السكري",          "wo" to "Diabète"),
+    "Hypertension" to mapOf("fr" to "Hypertension",      "ar" to "ارتفاع ضغط الدم",    "wo" to "Hypertension"),
+    "Asthma"       to mapOf("fr" to "Asthme",            "ar" to "الربو",               "wo" to "Asthme"),
+    "Heart disease" to mapOf("fr" to "Maladie cardiaque","ar" to "أمراض القلب",        "wo" to "Maladie cardiaque"),
+    "Epilepsy"     to mapOf("fr" to "Épilepsie",         "ar" to "الصرع",               "wo" to "Épilepsie"),
+)
+
+private fun translateMedicalTerm(code: String, langCode: String): String =
+    medicalTermTranslations[code]?.get(langCode)?.takeIf { it.isNotBlank() } ?: code
+
 @Composable
 fun SosCardScreen(
     navController: NavController,
@@ -180,8 +199,11 @@ fun SosCardScreen(
 
                     // 알레르기 — 번역 label 우선, 빈 문자열이거나 없으면 code(영어) 표시
                     val allergyLabels = card.allergies_translated.orEmpty()
-                        .map { item -> item.label[langCode]?.takeIf { it.isNotBlank() } ?: item.code }
-                        .ifEmpty { allergies }
+                        .map { item ->
+                            item.label[langCode]?.takeIf { it.isNotBlank() }
+                                ?: translateMedicalTerm(item.code, langCode)
+                        }
+                        .ifEmpty { allergies.map { translateMedicalTerm(it, langCode) } }
                     SosCardRow(
                         label = "Allergies",
                         value = allergyLabels.joinToString(", ").ifBlank { "None" }
@@ -190,8 +212,11 @@ fun SosCardScreen(
 
                     // 컨디션 — 번역 label 우선, 빈 문자열이거나 없으면 code(영어) 표시
                     val conditionLabels = card.conditions_translated.orEmpty()
-                        .map { item -> item.label[langCode]?.takeIf { it.isNotBlank() } ?: item.code }
-                        .ifEmpty { conditions }
+                        .map { item ->
+                            item.label[langCode]?.takeIf { it.isNotBlank() }
+                                ?: translateMedicalTerm(item.code, langCode)
+                        }
+                        .ifEmpty { conditions.map { translateMedicalTerm(it, langCode) } }
                     SosCardRow(
                         label = "Conditions",
                         value = conditionLabels.joinToString(", ").ifBlank { "None" }
