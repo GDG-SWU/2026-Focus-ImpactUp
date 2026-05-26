@@ -115,7 +115,7 @@ public class OcrServiceImpl implements OcrService {
                 extractedRawText,
                 translatedText,
                 dynamicKeywords,
-                "참고용으로만 사용하세요. 의료 판단에 사용하지 마세요.",
+                "For reference only. Do not use for medical decisions.",
                 !ocrServiceAvailable
         );
     }

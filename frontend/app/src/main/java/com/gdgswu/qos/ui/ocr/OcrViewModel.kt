@@ -12,6 +12,7 @@ import com.gdgswu.qos.data.local.UserProfilePrefs
 import com.gdgswu.qos.data.remote.ApiResult
 import com.gdgswu.qos.data.remote.QosRepository
 import com.gdgswu.qos.data.remote.TokenManager
+import com.gdgswu.qos.data.remote.model.MatchedRisk
 import com.gdgswu.qos.data.remote.model.OcrScanResponse
 import com.gdgswu.qos.data.remote.model.RiskCheckResponse
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -115,12 +116,15 @@ class OcrViewModel : ViewModel() {
                     return
                 }
                 val userId = TokenManager.getUserId(context) ?: "unknown"
-                val risk = withTimeoutOrNull(8_000L) {
+                val backendRisk = withTimeoutOrNull(8_000L) {
                     when (val r = repository.checkRisk(ocrResult.data.raw_text, userId)) {
                         is ApiResult.Success -> r.data
                         else -> null
                     }
                 }
+                // 백엔드 risk가 없거나 위험 미감지 시 로컬 알러지/질환으로 직접 체크
+                val risk = if (backendRisk?.risk_detected == true) backendRisk
+                           else localRiskCheck(context, ocrResult.data.raw_text.orEmpty()) ?: backendRisk
                 _uiState.value = OcrUiState.Result(ocrResult.data, risk)
             }
             is ApiResult.Error -> _uiState.value = OcrUiState.ScanError(friendlyError(ocrResult.message))
@@ -130,6 +134,44 @@ class OcrViewModel : ViewModel() {
 
     fun reset() {
         _uiState.value = OcrUiState.Idle
+    }
+
+    // 로컬 SharedPreferences 알러지/질환으로 OCR 텍스트 직접 위험 체크
+    private fun localRiskCheck(context: Context, ocrText: String): RiskCheckResponse? {
+        val upper = ocrText.uppercase()
+        val allergies  = UserProfilePrefs.loadAllergies(context)
+        val conditions = UserProfilePrefs.loadConditions(context)
+        val matched = mutableListOf<MatchedRisk>()
+
+        for (allergy in allergies) {
+            if (upper.contains(allergy.uppercase())) {
+                matched.add(MatchedRisk(
+                    keyword = allergy,
+                    matched_profile_field = "allergy",
+                    matched_value = allergy,
+                    warning_message = "You have a $allergy allergy. Do not take this medication."
+                ))
+            }
+        }
+        for (condition in conditions) {
+            if (upper.contains(condition.uppercase())) {
+                matched.add(MatchedRisk(
+                    keyword = condition,
+                    matched_profile_field = "condition",
+                    matched_value = condition,
+                    warning_message = "$condition-related risk detected. Use with caution."
+                ))
+            }
+        }
+        if (matched.isEmpty()) return null
+        return RiskCheckResponse(
+            risk_detected   = true,
+            risk_level      = "critical",
+            matched_risks   = matched,
+            trigger_haptic  = true,
+            trigger_alert_banner = true,
+            offline         = true
+        )
     }
 
     private fun friendlyError(raw: String): String = when {
