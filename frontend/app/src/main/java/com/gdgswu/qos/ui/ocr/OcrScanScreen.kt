@@ -329,8 +329,15 @@ fun ScanResultCard(
     val statusText  = if (isSafe) "Safe" else "Danger"
     val statusIcon  = if (isSafe) Icons.Filled.CheckCircle else Icons.Filled.Cancel
 
-    // 약 이름: OCR 텍스트 첫 줄 또는 전체 (짧으면)
-    val medName = ocr.raw_text?.lines()?.firstOrNull()?.trim() ?: ""
+    // 약 이름: 위험이면 매칭된 성분명, 안전이면 OCR 첫 줄 중 의미 있는 텍스트
+    val medName = if (!isSafe) {
+        risk?.matched_risks?.firstOrNull()?.keyword?.trim() ?: ""
+    } else {
+        ocr.raw_text?.lines()
+            ?.map { it.trim() }
+            ?.firstOrNull { it.isNotBlank() && it.any { c -> c.isLetter() } }
+            ?: ""
+    }
 
     // 설명 한 줄: 위험이면 경고 메시지, 안전이면 안내
     val description = if (!isSafe) {
