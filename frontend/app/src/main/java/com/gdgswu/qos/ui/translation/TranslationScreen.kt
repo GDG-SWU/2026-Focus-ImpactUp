@@ -59,13 +59,18 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
     // 로컬 samplePhrases 고정 사용 (백엔드 DB가 한글로 저장되어 있어 API 카드 미사용)
     val baseList = samplePhrases
 
-    // 백엔드 TTS 플레이어
+    // TTS 플레이어
     val ttsPlayer = remember { TtsPlayer(context) }
     val ttsScope = rememberCoroutineScope()
+    var ttsPlayingText by remember { mutableStateOf<String?>(null) }
     DisposableEffect(Unit) { onDispose { ttsPlayer.release() } }
 
     fun playTts(text: String, langCode: String) {
-        ttsScope.launch { ttsPlayer.play(text, langCode) }
+        ttsScope.launch {
+            ttsPlayingText = text
+            ttsPlayer.play(text, langCode)
+            ttsPlayingText = null
+        }
     }
 
     fun resetAll() {
@@ -208,6 +213,7 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
                     translated = translatedResult!!,
                     language = selectedLanguage,
                     isSaved = isCustomSaved,
+                    isTtsPlaying = ttsPlayingText == translatedResult,
                     onPlayTts = { playTts(translatedResult!!, selectedLanguage.code) },
                     onSave = {
                         if (!isCustomSaved) {
@@ -302,9 +308,11 @@ fun TranslationScreen(navController: NavController, vm: TranslationViewModel = v
 
         // ── 문장 리스트 ────────────────────────────────────────────────────────
         items(filteredPhrases, key = { it.id }) { phrase ->
+            val translation = phrase.getTranslation(selectedLanguage)
             PhraseCard(
                 phrase = phrase,
                 language = selectedLanguage,
+                isTtsPlaying = ttsPlayingText == translation,
                 onPlayTts = { text -> playTts(text, selectedLanguage.code) },
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -320,6 +328,7 @@ fun TranslationResultCard(
     translated: String,
     language: SupportedLanguage,
     isSaved: Boolean,
+    isTtsPlaying: Boolean = false,
     onSave: () -> Unit,
     onPlayTts: () -> Unit = {}
 ) {
@@ -355,12 +364,12 @@ fun TranslationResultCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(QOSLightBlue)
+                    .background(if (isTtsPlaying) QOSCyan else QOSLightBlue)
             ) {
                 Icon(
                     Icons.Filled.VolumeUp,
                     contentDescription = "Play",
-                    tint = QOSCyan,
+                    tint = if (isTtsPlaying) Color.White else QOSCyan,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -560,6 +569,7 @@ fun CategoryFilter(
 fun PhraseCard(
     phrase: Phrase,
     language: SupportedLanguage,
+    isTtsPlaying: Boolean = false,
     onPlayTts: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -621,12 +631,12 @@ fun PhraseCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(QOSLightBlue)
+                    .background(if (isTtsPlaying) QOSCyan else QOSLightBlue)
             ) {
                 Icon(
                     Icons.Filled.VolumeUp,
                     contentDescription = "Play",
-                    tint = QOSCyan,
+                    tint = if (isTtsPlaying) Color.White else QOSCyan,
                     modifier = Modifier.size(18.dp)
                 )
             }

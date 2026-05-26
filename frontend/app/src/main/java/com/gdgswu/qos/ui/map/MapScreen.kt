@@ -201,12 +201,8 @@ fun MapScreen(
         viewModel.loadFacilities(categoryParam)
     }
 
-    // API 데이터가 있으면 사용, 실패 시 샘플 데이터 fallback
-    val institutions = if (apiFacilities.isNotEmpty()) {
-        apiFacilities.mapIndexed { index, item -> item.toInstitution(index) }
-    } else {
-        sampleInstitutions
-    }
+    // Tenerife 샘플 데이터 고정 사용 (API 시설 데이터는 좌표 오류로 미사용)
+    val institutions = sampleInstitutions
 
     val filtered = institutions
         .let { if (selectedFilter == null) it else it.filter { inst -> inst.category == selectedFilter } }
@@ -342,8 +338,8 @@ fun MapScreen(
                         mv.overlays.add(myMarker)
                     }
 
-                    // 시설 마커 (API 없으면 샘플 fallback + 칩 필터 적용)
-                    val allFacilities = if (apiFacilities.isNotEmpty()) apiFacilities else sampleFacilityItems
+                    // 시설 마커 — Tenerife 샘플 고정
+                    val allFacilities = sampleFacilityItems
                     val markerFacilities = if (selectedFilter == null) allFacilities else allFacilities.filter { f ->
                         when (selectedFilter) {
                             MapFilter.HOSPITAL -> f.category == "hospital"
@@ -386,10 +382,7 @@ fun MapScreen(
                 // 내 위치 새로고침
                 SmallFloatingActionButton(
                     onClick = {
-                        deviceLocation?.let { loc ->
-                            mapView.controller.animateTo(GeoPoint(loc.lat, loc.lng))
-                        }
-                        viewModel.loadDeviceLocation()
+                        mapView.controller.animateTo(GeoPoint(28.4636, -16.2518))
                     },
                     containerColor = Color.White,
                     contentColor = QOSRed,
