@@ -66,12 +66,20 @@ fun OcrScanScreen(navController: NavController) {
     val uiState by viewModel.uiState.collectAsState()
 
     val cameraPermission = rememberPermissionState(android.Manifest.permission.CAMERA)
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 위험 감지 시 햅틱
     LaunchedEffect(uiState) {
         if (uiState is OcrUiState.Result) {
             val risk = (uiState as OcrUiState.Result).risk
             if (risk?.trigger_haptic == true) {
+                // Compose 햅틱 (기기 호환성 높음)
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                kotlinx.coroutines.delay(150)
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                kotlinx.coroutines.delay(150)
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                // 백업: Vibrator API 직접 호출
                 triggerHaptic(context)
             }
         }
