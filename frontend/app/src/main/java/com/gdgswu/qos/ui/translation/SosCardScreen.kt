@@ -53,6 +53,32 @@ private val medicalTermTranslations: Map<String, Map<String, String>> = mapOf(
 private fun translateMedicalTerm(code: String, langCode: String): String =
     medicalTermTranslations[code]?.get(langCode)?.takeIf { it.isNotBlank() } ?: code
 
+private val companionTranslations: Map<String, Map<String, String>> = mapOf(
+    "Traveling with children" to mapOf(
+        "fr" to "Voyage avec des enfants",
+        "ar" to "سفر مع أطفال",
+        "wo" to "Traveling with children"
+    ),
+    "Pregnant woman in group" to mapOf(
+        "fr" to "Femme enceinte dans le groupe",
+        "ar" to "امرأة حامل في المجموعة",
+        "wo" to "Pregnant woman in group"
+    ),
+    "Children + Pregnant woman" to mapOf(
+        "fr" to "Enfants + Femme enceinte",
+        "ar" to "أطفال + امرأة حامل",
+        "wo" to "Children + Pregnant woman"
+    ),
+    "None" to mapOf(
+        "fr" to "Aucun",
+        "ar" to "لا يوجد",
+        "wo" to "Dara"
+    )
+)
+
+private fun translateCompanionText(text: String, langCode: String): String =
+    companionTranslations[text]?.get(langCode)?.takeIf { it.isNotBlank() } ?: text
+
 @Composable
 fun SosCardScreen(
     navController: NavController,
@@ -231,14 +257,27 @@ fun SosCardScreen(
                     }
 
                     // 동반자
-                    SosCardRow(label = "Companions", value = companionText)
+                    SosCardRow(label = "Companions", value = translateCompanionText(companionText, langCode))
                     Spacer(modifier = Modifier.height(12.dp))
                 } else {
-                    // API 실패 시 로컬 데이터 fallback
-                    localProfile.forEach { (key, value) ->
-                        SosCardRow(label = key, value = value)
+                    // API 실패 시 로컬 데이터 fallback — 선택 언어로 번역
+                    val langCode = selectedLanguage.code
+                    val translatedAllergies = allergies.map { translateMedicalTerm(it, langCode) }
+                        .joinToString(", ").ifBlank { "None" }
+                    val translatedConditions = conditions.map { translateMedicalTerm(it, langCode) }
+                        .joinToString(", ").ifBlank { "None" }
+                    val translatedCompanion = translateCompanionText(companionText, langCode)
+
+                    SosCardRow(label = "Allergies", value = translatedAllergies)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SosCardRow(label = "Conditions", value = translatedConditions)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (bloodType.isNotBlank() && bloodType != "Unknown") {
+                        SosCardRow(label = "Blood type", value = bloodType)
                         Spacer(modifier = Modifier.height(12.dp))
                     }
+                    SosCardRow(label = "Companions", value = translatedCompanion)
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
